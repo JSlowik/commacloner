@@ -53,76 +53,74 @@ func serve(args []string) error {
 	if err := yaml.Unmarshal(data, &c); err != nil {
 		return fmt.Errorf("error parse config file %s: %v", configFile, err)
 	}
-	logger, err := log.InitWithConfiguration(c.Logging.Level, c.Logging.Format)
-	if err != nil {
-		return fmt.Errorf("invalid config: %v", err)
-	}
-
 	if err := c.Validate(); err != nil {
 		return err
 	}
+
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt) // Notify the interrupt channel for SIGINT
+
+	//init logging
+	l, err := log.InitWithConfiguration(c.Logging.Level, c.Logging.Format)
+	if err != nil {
+		return fmt.Errorf("invalid config: %v", err)
+	}
+	logger := l.Sugar()
 	logger.Info("logging configured")
 
+	//log mappings
 	logger.Info("loading bot mappings")
 	botMap := make(map[int][]config.BotMapping)
 	for _, mapping := range c.Bots {
 		botMap[mapping.Source.ID] = append(botMap[mapping.Source.ID], mapping)
 	}
 
-	// Set up the websocket
-	stream := websockets.DealsStream{
-		APIConfig: c.API,
-		Bots:      botMap,
-	}
-	message, err := stream.Build()
-	if err != nil {
-		logger.Fatal("could not build deal stream", zap.Error(err))
-	}
-
-	logger.Debug("subscribing with message", zap.Any("message", message))
-
-	// Connect to the websocket
-	done = make(chan interface{})    // Channel to indicate that the receiverHandler is done
-	interrupt = make(chan os.Signal) // Channel to listen for interrupt signal to terminate gracefully
-
-	signal.Notify(interrupt, os.Interrupt) // Notify the interrupt channel for SIGINT
-
+	//connect to the websocket
+	logger.Infof("connecting to websocket: %s", c.API.WebsocketURL)
 	conn, _, err := websocket.DefaultDialer.Dial(c.API.WebsocketURL, nil)
 	if err != nil {
 		logger.Fatal("error connecting to websocket server: ", zap.Error(err))
 	}
 	defer conn.Close()
-	go stream.ReceiveDeal(conn, logger, done)
 
+	done := make(chan interface{})    // Channel to indicate that the receiverHandler is done
+
+	//Send the subscription message
+	stream := websockets.DealsStream{
+		APIConfig: c.API,
+		Bots:      botMap,
+	}
+	message, err := stream.Build()
 	e := conn.WriteJSON(message)
 	if e != nil {
-		logger.Error("cannot subscribe ", zap.Error(e))
+		logger.Errorf("cannot subscribe to topic %v", e)
+		return e
 	}
+
+	//Create Deal Listener
+	go stream.ReceiveDeal(conn, l, done)
 
 	for {
 		select {
+		case <-done:
+			return nil
 		case <-interrupt:
-			// We received a SIGINT (Ctrl + C). Terminate gracefully...
-			logger.Info("Received SIGINT interrupt signal. Closing all pending connections")
+			logger.Warn("interrupted")
 
-			// Close our websocket connection
+			// Cleanly close the connection by sending a close message and then
+			// waiting (with timeout) for the server to close the connection.
 			err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if err != nil {
-				logger.Error("Error during closing websocket:", zap.Error(err))
-				return nil
+				logger.Errorf("error writing close message: %v", err)
+				return err
 			}
-
 			select {
 			case <-done:
-				logger.Info("Receiver Channel Closed! Exiting....")
-			case <-time.After(time.Duration(1) * time.Second):
-				logger.Warn("Timeout in closing receiving channel. Exiting....")
+			case <-time.After(time.Second):
 			}
+			return nil
 		}
 	}
 }
 
-var (
-	done      chan interface{}
-	interrupt chan os.Signal
-)
