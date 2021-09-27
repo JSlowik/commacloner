@@ -22,6 +22,12 @@ checkboxes.
 Configurations are loaded into CommaCloner via YAML.  [examples/config.yaml](examples/config.yaml) contains a basic 
 template for setting up the application
 
+## Startup
+Use the following command to startup
+```bash
+./commacloner serve examples/config.yaml
+```
+
 
 #### About Overrides
 Overrides allow you to manipulate deals "on the fly" to account for different currencies (USD, USDT, USDC, etc), before
