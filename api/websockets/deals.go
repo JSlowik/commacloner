@@ -60,7 +60,7 @@ func (d DealsStream) ReceiveDeal(connection *websocket.Conn, logger *zap.Logger,
 		_, rawMessage, err := connection.ReadMessage()
 		if err != nil {
 			log.Error("error in receive: ", zap.Error(err))
-			continue
+			break
 		}
 
 		// Ping Messages
