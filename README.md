@@ -22,6 +22,13 @@ checkboxes.
 Configurations are loaded into CommaCloner via YAML.  [examples/config.yaml](examples/config.yaml) contains a basic 
 template for setting up the application
 
+When creating bots in 3commas, your source bot will have all the deal start conditions.  Once configured, copy your 
+bot a second time into the exchange account of your choosing, and change the "Deal Start Condition" to "Manually/API".
+
+Note that source and destination bots can be configured any way you wish, they don't HAVE to match in terms of base/safety
+order sizes, max safety trades, etc. All that matters is that the destination bot has the same pairs available as the 
+source bot (with exceptions, see "Overrides"). 
+
 ## Startup
 Use the following command to startup
 ```bash
@@ -31,7 +38,7 @@ Use the following command to startup
 
 #### About Overrides
 Overrides allow you to manipulate deals "on the fly" to account for different currencies (USD, USDT, USDC, etc), before
-creating the deal on your destination bot.  Additionally overrides also allows you to cancel deals on your source bot 
+creating the deal on your destination bot.  Additionally, overrides also allow you to cancel deals on your source bot 
 that are unavailable on the destination bot. 
 
 NOTE:  
@@ -58,10 +65,13 @@ api:
 # this can be an array of 1 to n configurations.  there is no limit
 bots:
   -
+    #just a generic id for personal organization
     id: my_first_mapping
     source:
+      #the id of the bot deals will be listened FROM
       bot_id: 1234
     dest:
+      #the id of the bot deals will be sent TO
       bot_id: 5678
     overrides:
       quote_currency: "USD"

@@ -125,7 +125,7 @@ func serve(args []string) error {
 		case <-done:
 			return nil
 		case <-interrupt:
-			logger.Infof("interrupt")
+			logger.Info("connection interrupted, shutting down")
 
 			// Cleanly close the connection by sending a close message and then
 			// waiting (with timeout) for the server to close the connection.
