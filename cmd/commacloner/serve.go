@@ -109,7 +109,7 @@ func serve(args []string) error {
 				logger.Errorf("read error %v", err)
 				return
 			}
-			logger.Infof("recv: %s", message)
+			logger.Debugf("recv: %s", message)
 			err = stream.HandleDeal(message, l)
 			if err != nil {
 				logger.Errorf("could not handle message from deals stream: %v", err )
