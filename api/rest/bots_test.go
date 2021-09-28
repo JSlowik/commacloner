@@ -149,6 +149,34 @@ func TestStartNewDeal(t *testing.T) {
 			pair:    "BTC_USDT",
 			wantErr: true,
 		},
+		{
+			name: "api down",
+			apiConfig: config.API{
+				Key:    "abcd1234",
+				Secret: "zyxw9876",
+			},
+			bot: config.BotMapping{
+				ID: "standard_mapping",
+				Source: config.BotConfig{
+					ID: 1,
+				},
+				Destination: config.BotConfig{
+					ID: 2,
+				},
+				Overrides: config.BotOverrides{
+					QuoteCurrency: "",
+					BaseCurrency:  "",
+				},
+			},
+			handler: customHandlerFields{
+				handlerPath: StartNewDealPath,
+				handler: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusBadGateway)
+				},
+			},
+			pair:    "BTC_USDT",
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -216,6 +244,36 @@ func TestCancelDeal(t *testing.T) {
 			},
 			panicSell: false,
 			wantErr:   false,
+		},
+		{
+			name: "deal cancel failure",
+			apiConfig: config.API{
+				Key:    "abcd1234",
+				Secret: "zyxw9876",
+			},
+			handler: customHandlerFields{
+				handlerPath: CancelDealPath,
+				handler: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusUnprocessableEntity)
+				},
+			},
+			panicSell: false,
+			wantErr:   true,
+		},
+		{
+			name: "rest api down",
+			apiConfig: config.API{
+				Key:    "abcd1234",
+				Secret: "zyxw9876",
+			},
+			handler: customHandlerFields{
+				handlerPath: CancelDealPath,
+				handler: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusBadGateway)
+				},
+			},
+			panicSell: false,
+			wantErr:   true,
 		},
 		{
 			name: "panic sell unavailable deal",

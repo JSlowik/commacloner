@@ -64,6 +64,7 @@ bots:
     dest:
       bot_id: 5678
     overrides:
+      #quote_currency overrides the right side of pair in a long deal, left side of deal in short
       quote_currency: "USD"
       base_currency: ""
       cancelUnavailableDeals: true
