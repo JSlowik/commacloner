@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/jslowik/commacloner/api/websockets"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/gorilla/websocket"
-	"github.com/jslowik/commacloner/api/websockets"
 	"github.com/jslowik/commacloner/config"
 	"github.com/jslowik/commacloner/log"
 	"github.com/spf13/cobra"
@@ -76,44 +76,63 @@ func serve(args []string) error {
 		botMap[mapping.Source.ID] = append(botMap[mapping.Source.ID], mapping)
 	}
 
-	//connect to the websocket
 	logger.Infof("connecting to websocket: %s", c.API.WebsocketURL)
 	conn, _, err := websocket.DefaultDialer.Dial(c.API.WebsocketURL, nil)
 	if err != nil {
 		logger.Fatal("error connecting to websocket server: ", zap.Error(err))
 	}
 	defer conn.Close()
-
-	done := make(chan interface{})    // Channel to indicate that the receiverHandler is done
+	done := make(chan struct{})    // Channel to indicate that the receiverHandler is done
 
 	//Send the subscription message
 	stream := websockets.DealsStream{
 		APIConfig: c.API,
 		Bots:      botMap,
 	}
-	message, err := stream.Build()
-	e := conn.WriteJSON(message)
+	subscriptionMessage, err := stream.Build()
+	if err != nil {
+		logger.Fatalf("could not build deal subscription: %v", err)
+		return err
+	}
+
+	e := conn.WriteJSON(subscriptionMessage)
 	if e != nil {
 		logger.Errorf("cannot subscribe to topic %v", e)
 		return e
 	}
 
-	//Create Deal Listener
-	go stream.ReceiveDeal(conn, l, done)
+	go func() {
+		defer close(done)
+		for {
+			_, message, err := conn.ReadMessage()
+			if err != nil {
+				logger.Errorf("read error %v", err)
+				return
+			}
+			logger.Infof("recv: %s", message)
+			err = stream.HandleDeal(message, l)
+			if err != nil {
+				logger.Errorf("could not handle message from deals stream: %v", err )
+			}
+		}
+	}()
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-done:
 			return nil
 		case <-interrupt:
-			logger.Warn("interrupted")
+			logger.Infof("interrupt")
 
 			// Cleanly close the connection by sending a close message and then
 			// waiting (with timeout) for the server to close the connection.
-			err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-			if err != nil {
-				logger.Errorf("error writing close message: %v", err)
-				return err
+			closeError := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			if closeError != nil {
+				logger.Errorf("write close: %v", closeError)
+				return closeError
 			}
 			select {
 			case <-done:
@@ -122,5 +141,6 @@ func serve(args []string) error {
 			return nil
 		}
 	}
+
 }
 
