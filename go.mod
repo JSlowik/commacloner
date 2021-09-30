@@ -6,6 +6,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
+	github.com/jpillora/backoff v1.0.0
 	github.com/spf13/cobra v1.2.1
 	go.uber.org/zap v1.19.1
 	honnef.co/go/tools v0.0.1-2020.1.4

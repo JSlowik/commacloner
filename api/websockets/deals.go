@@ -53,7 +53,7 @@ func (d DealsStream) Build() (*Message, error) {
 }
 
 // HandleDeal reads messages from the websocket connection and handles the deal
-func (d DealsStream) HandleDeal(rawMessage []byte , logger *zap.Logger) error {
+func (d DealsStream) HandleDeal(rawMessage []byte, logger *zap.Logger) error {
 	log := logger.Sugar()
 
 	// Ping Messages
@@ -95,5 +95,3 @@ func (d DealsStream) HandleDeal(rawMessage []byte , logger *zap.Logger) error {
 	log.Warnf("unsupported message type %v", string(rawMessage))
 	return nil
 }
-
-

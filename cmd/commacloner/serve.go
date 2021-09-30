@@ -14,7 +14,6 @@ import (
 	"github.com/jslowik/commacloner/config"
 	"github.com/jslowik/commacloner/log"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 func commandServe() *cobra.Command {
@@ -57,10 +56,6 @@ func serve(args []string) error {
 		return err
 	}
 
-
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt) // Notify the interrupt channel for SIGINT
-
 	//init logging
 	l, err := log.InitWithConfiguration(c.Logging.Level, c.Logging.Format)
 	if err != nil {
@@ -76,15 +71,10 @@ func serve(args []string) error {
 		botMap[mapping.Source.ID] = append(botMap[mapping.Source.ID], mapping)
 	}
 
-	logger.Infof("connecting to websocket: %s", c.API.WebsocketURL)
-	conn, _, err := websocket.DefaultDialer.Dial(c.API.WebsocketURL, nil)
-	if err != nil {
-		logger.Fatal("error connecting to websocket server: ", zap.Error(err))
-	}
-	defer conn.Close()
-	done := make(chan struct{})    // Channel to indicate that the receiverHandler is done
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt) // Notify the interrupt channel for SIGINT
 
-	//Send the subscription message
+	//Make the subscription message
 	stream := websockets.DealsStream{
 		APIConfig: c.API,
 		Bots:      botMap,
@@ -95,16 +85,31 @@ func serve(args []string) error {
 		return err
 	}
 
-	e := conn.WriteJSON(subscriptionMessage)
-	if e != nil {
-		logger.Errorf("cannot subscribe to topic %v", e)
-		return e
+	ws := websockets.Websocket{
+		Id:     "deals_listener",
+		Logger: l,
+		OnConnect: func(ws *websockets.Websocket) {
+			//Subscribe
+			e := ws.WriteJSON(subscriptionMessage)
+			if e != nil {
+				ws.Logger.Sugar().Errorf("could not subscribe to topic: %v", e)
+			}
+		},
+		Verbose:   c.Logging.Level == "debug",
+		Reconnect: true,
 	}
 
+	e := ws.Dial(c.API.WebsocketURL, nil)
+	if e != nil {
+		logger.Fatalf("could not connect to websocket: %v", e)
+	}
+
+	defer ws.Close()
+	done := make(chan struct{}) // Channel to indicate that the receiverHandler is done
 	go func() {
 		defer close(done)
 		for {
-			_, message, err := conn.ReadMessage()
+			_, message, err := ws.ReadMessage()
 			if err != nil {
 				logger.Errorf("read error %v", err)
 				return
@@ -112,13 +117,10 @@ func serve(args []string) error {
 			logger.Debugf("recv: %s", message)
 			err = stream.HandleDeal(message, l)
 			if err != nil {
-				logger.Errorf("could not handle message from deals stream: %v", err )
+				logger.Errorf("could not handle message from deals stream: %v", err)
 			}
 		}
 	}()
-
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
 
 	for {
 		select {
@@ -129,7 +131,7 @@ func serve(args []string) error {
 
 			// Cleanly close the connection by sending a close message and then
 			// waiting (with timeout) for the server to close the connection.
-			closeError := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			closeError := ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if closeError != nil {
 				logger.Errorf("write close: %v", closeError)
 				return closeError
@@ -143,4 +145,3 @@ func serve(args []string) error {
 	}
 
 }
-
