@@ -102,10 +102,11 @@ func (ws *Websocket) ReadMessage() (messageType int, message []byte, err error) 
 	if ws.IsConnected() {
 		messageType, message, err = ws.Conn.ReadMessage()
 		if err != nil {
-			if ws.OnReadError != nil {
+			if ws.OnReadError != nil && websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure) {
 				ws.OnReadError(ws, err)
+				ws.Logger.Sugar().Infof("attempting reconnect")
+				ws.closeAndReconnect()
 			}
-			ws.closeAndReconnect()
 		}
 	}
 
@@ -131,6 +132,7 @@ func (ws *Websocket) Close() {
 func (ws *Websocket) closeAndReconnect() {
 	ws.Close()
 	if ws.Reconnect {
+		ws.Logger.Sugar().Infof("reconnecting...")
 		ws.Connect()
 	}
 }

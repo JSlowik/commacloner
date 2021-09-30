@@ -95,6 +95,9 @@ func serve(args []string) error {
 				ws.Logger.Sugar().Errorf("could not subscribe to topic: %v", e)
 			}
 		},
+		OnReadError: func(ws *websockets.Websocket, err error) {
+			ws.Logger.Sugar().Errorf("error while reading message: %v", err)
+		},
 		Verbose:   c.Logging.Level == "debug",
 		Reconnect: true,
 	}
@@ -112,7 +115,9 @@ func serve(args []string) error {
 			_, message, err := ws.ReadMessage()
 			if err != nil {
 				logger.Errorf("read error %v", err)
-				return
+				if !ws.IsConnected() {
+					return
+				}
 			}
 			logger.Debugf("recv: %s", message)
 			err = stream.HandleDeal(message, l)
