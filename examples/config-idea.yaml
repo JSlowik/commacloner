@@ -1,0 +1,39 @@
+# Options for controlling the logger.
+logging:
+  level: "debug"
+  # "console" or "json" are the valid formats
+  format: "console"
+# The 3Commas API key and secret for the account you'll be connecting to
+api:
+  key: ""
+  secret: ""
+  websocket_url: "wss://ws.3commas.io/websocket"
+  rest_url: "https://api.3commas.io/public/api"
+#IDEA - Store the mappings in something other than a config for easier mapping/updating
+storage:
+  type: sqlite3
+  config:
+    file: examples/commacloner.db
+
+###
+# bot types
+# COPY - 1:1 copy, don't have to own source bot, with overrides
+#
+#bot configurations
+bots:
+  -
+    id: bebek_ttp_to_paper #internal id
+    config:
+      sync_period: "10m" #how often to re-sync with source bot
+      source:
+        bot_id: 6093127 #source bot id
+        secret: abcd1234 #source bot secret
+      destination:
+        account_id: #account id of destination
+        overrides:
+          paper_proxy: true #use paper account as a proxy to main for deal start conditions
+          quote_currency: "USDC" #override quote currency on destination exchange
+      overrides:
+        cancelUnavailableDeals: true
+        panicSellUnavailableDeals: false
+
