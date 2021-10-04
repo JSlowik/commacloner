@@ -1,9 +1,9 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"github.com/jslowik/commacloner/api/websockets"
 	"github.com/jslowik/commacloner/recws"
 	"io/ioutil"
@@ -90,7 +90,7 @@ func serve(args []string) error {
 		return err
 	}
 
-	//ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.TODO()
 	ws := recws.RecConn{
 		KeepAliveTimeout: 10 * time.Second,
 	}
@@ -100,28 +100,16 @@ func serve(args []string) error {
 	}
 
 	ws.Dial(c.API.WebsocketURL, nil)
-	defer ws.Close()
-	done := make(chan struct{}) // Channel to indicate that the receiverHandler is done
+	//go func() {
+	//	time.Sleep(2 * time.Second)
+	//	cancel()
+	//}()
+
 	for {
 		select {
-		case <-done:
+		case <-ctx.Done():
 			go ws.Close()
 			logger.Warnf("Websocket closed %s", ws.GetURL())
-			return nil
-		case <-interrupt:
-			logger.Info("connection interrupted, shutting down")
-
-			// Cleanly close the connection by sending a close message and then
-			// waiting (with timeout) for the server to close the connection.
-			closeError := ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-			if closeError != nil {
-				logger.Errorf("write close: %v", closeError)
-				return closeError
-			}
-			select {
-			case <-done:
-			case <-time.After(time.Second):
-			}
 			return nil
 		default:
 			if !ws.IsConnected() {
