@@ -439,6 +439,7 @@ func (rc *RecConn) keepAlive() {
 				if rc.IsClosedForever() {
 					log.Println(ErrClosedForever)
 				}
+				log.Printf("Last Response %s, Timeout %s", keepAliveResponse.getLastResponse(),rc.getKeepAliveTimeout())
 				rc.CloseAndReconnect()
 				return
 			}
