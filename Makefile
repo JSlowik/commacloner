@@ -12,8 +12,7 @@ group=$(shell id -g -n)
 
 export GOBIN=$(PWD)
 
-LD_FLAGS="-s -w -X $(REPO_PATH)/version.Version=$(VERSION)"
-
+LD_FLAGS="-s -w"
 
 build: bin/commacloner
 
