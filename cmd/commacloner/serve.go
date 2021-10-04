@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"github.com/jslowik/commacloner/api/websockets"
 	"github.com/jslowik/commacloner/recws"
 	"io/ioutil"
@@ -100,20 +101,36 @@ func serve(args []string) error {
 	}
 
 	ws.Dial(c.API.WebsocketURL, nil)
-	//go func() {
-	//	time.Sleep(2 * time.Second)
-	//	cancel()
-	//}()
 
+	done := make(chan struct{})
 	for {
 		select {
 		case <-ctx.Done():
 			go ws.Close()
 			logger.Warnf("Websocket closed %s", ws.GetURL())
 			return nil
+		case <-interrupt:
+			logger.Infof("interrupt")
+
+			// Cleanly close the connection by sending a close message and then
+			// waiting (with timeout) for the server to close the connection.
+			err := ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			if err != nil {
+				logger.Errorf("write close: %v", err)
+				return err
+			}
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+			}
+			return nil
 		default:
 			if !ws.IsConnected() {
 				logger.Errorf("Websocket disconnected %s", ws.GetURL())
+				for !ws.IsConnected() {
+					logger.Infof("still disconnected.  sleepting for 2 seconds")
+					time.Sleep(2 * time.Second)
+				}
 				continue
 			}
 
