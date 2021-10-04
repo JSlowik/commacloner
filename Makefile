@@ -14,7 +14,6 @@ export GOBIN=$(PWD)
 
 LD_FLAGS="-s -w"
 
-
 build: bin/commacloner
 
 bin/commacloner:
