@@ -3,14 +3,15 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"github.com/jslowik/commacloner/api/websockets"
+	"github.com/jslowik/commacloner/recws"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/ghodss/yaml"
-	"github.com/gorilla/websocket"
 	"github.com/jslowik/commacloner/config"
 	"github.com/jslowik/commacloner/log"
 	"github.com/spf13/cobra"
@@ -30,6 +31,10 @@ func commandServe() *cobra.Command {
 		},
 	}
 }
+
+var (
+	ws *recws.RecConn
+)
 
 func serve(args []string) error {
 	switch len(args) {
@@ -85,51 +90,23 @@ func serve(args []string) error {
 		return err
 	}
 
-	ws := websockets.Websocket{
-		Id:     "deals_listener",
-		Logger: l,
-		OnConnect: func(ws *websockets.Websocket) {
-			//Subscribe
-			e := ws.WriteJSON(subscriptionMessage)
-			if e != nil {
-				ws.Logger.Sugar().Errorf("could not subscribe to topic: %v", e)
-			}
-		},
-		OnReadError: func(ws *websockets.Websocket, err error) {
-			ws.Logger.Sugar().Errorf("error while reading message: %v", err)
-		},
-		Verbose:   c.Logging.Level == "debug",
-		Reconnect: true,
+	//ctx, cancel := context.WithCancel(context.Background())
+	ws := recws.RecConn{
+		KeepAliveTimeout: 10 * time.Second,
 	}
 
-	e := ws.Dial(c.API.WebsocketURL, nil)
-	if e != nil {
-		logger.Fatalf("could not connect to websocket: %v", e)
+	ws.SubscribeHandler = func() error {
+		return ws.WriteJSON(subscriptionMessage)
 	}
 
+	ws.Dial(c.API.WebsocketURL, nil)
 	defer ws.Close()
 	done := make(chan struct{}) // Channel to indicate that the receiverHandler is done
-	go func() {
-		defer close(done)
-		for {
-			_, message, err := ws.ReadMessage()
-			if err != nil {
-				logger.Errorf("read error %v", err)
-				if !ws.IsConnected() {
-					return
-				}
-			}
-			logger.Debugf("recv: %s", message)
-			err = stream.HandleDeal(message, l)
-			if err != nil {
-				logger.Errorf("could not handle message from deals stream: %v", err)
-			}
-		}
-	}()
-
 	for {
 		select {
 		case <-done:
+			go ws.Close()
+			logger.Warnf("Websocket closed %s", ws.GetURL())
 			return nil
 		case <-interrupt:
 			logger.Info("connection interrupted, shutting down")
@@ -146,7 +123,26 @@ func serve(args []string) error {
 			case <-time.After(time.Second):
 			}
 			return nil
+		default:
+			if !ws.IsConnected() {
+				logger.Errorf("Websocket disconnected %s", ws.GetURL())
+				continue
+			}
+
+			_, message, err := ws.ReadMessage()
+			if err != nil {
+				logger.Errorf("Error: ReadMessage: %v", err)
+				continue
+			}
+
+			logger.Debugf("recv: %s", message)
+			err = stream.HandleDeal(message, l)
+			if err != nil {
+				logger.Errorf("could not handle message from deals stream: %v", err)
+			}
+
+
+			logger.Infof("Success: %s", message)
 		}
 	}
-
 }
