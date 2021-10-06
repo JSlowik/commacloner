@@ -142,8 +142,8 @@ func serve(args []string) error {
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	//ticker := time.NewTicker(time.Second)
+	//defer ticker.Stop()
 	for {
 		select {
 		case <-done:
@@ -155,12 +155,12 @@ func serve(args []string) error {
 				logger.Errorf("write message out failure: %v", err)
 				return err
 			}
-		case t := <-ticker.C:
-			err := conn.WriteMessage(websocket.TextMessage, []byte(t.String()))
-			if err != nil && !websocket.IsCloseError(err) {
-				logger.Errorf("write ticker failure: %v", err)
-				return err
-			}
+		//case t := <-ticker.C:
+		//	err := conn.WriteMessage(websocket.TextMessage, []byte(t.String()))
+		//	if err != nil && !websocket.IsCloseError(err) {
+		//		logger.Errorf("write ticker failure: %v", err)
+		//		return err
+		//	}
 		case <-interrupt:
 			logger.Infof("interrupt")
 			// Cleanly close the connection by sending a close message and then
