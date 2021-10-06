@@ -7,8 +7,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/jslowik/commacloner/api/websockets"
 	"go.uber.org/zap"
-
-	//"go.uber.org/zap"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -154,13 +152,13 @@ func serve(args []string) error {
 			logger.Debugf("Send Message %s", m)
 			err := conn.WriteJSON(m)
 			if err != nil {
-				logger.Errorf("write message out: %v", err)
+				logger.Errorf("write message out failure: %v", err)
 				return err
 			}
 		case t := <-ticker.C:
 			err := conn.WriteMessage(websocket.TextMessage, []byte(t.String()))
-			if err != nil {
-				logger.Errorf("write ticker: %v", err)
+			if err != nil && !websocket.IsCloseError(err) {
+				logger.Errorf("write ticker failure: %v", err)
 				return err
 			}
 		case <-interrupt:
@@ -169,7 +167,7 @@ func serve(args []string) error {
 			// waiting (with timeout) for the server to close the connection.
 			err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if err != nil {
-				logger.Errorf("write close: %v", err)
+				logger.Errorf("write close failure: %v", err)
 				return err
 			}
 			select {
