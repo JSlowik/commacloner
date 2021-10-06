@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/jslowik/commacloner/api/websockets"
-	"go.uber.org/zap"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/jslowik/commacloner/api/websockets"
+	"go.uber.org/zap"
 
 	"github.com/ghodss/yaml"
 	"github.com/jslowik/commacloner/config"
@@ -142,8 +143,6 @@ func serve(args []string) error {
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
 	for {
 		select {
 		case <-done:
@@ -153,12 +152,6 @@ func serve(args []string) error {
 			err := conn.WriteJSON(m)
 			if err != nil {
 				logger.Errorf("write message out failure: %v", err)
-				return err
-			}
-		case t := <-ticker.C:
-			err := conn.WriteMessage(websocket.TextMessage, []byte(t.String()))
-			if err != nil && !websocket.IsCloseError(err) {
-				logger.Errorf("write ticker failure: %v", err)
 				return err
 			}
 		case <-interrupt:
