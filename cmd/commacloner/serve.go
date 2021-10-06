@@ -151,7 +151,7 @@ func serve(args []string) error {
 		case <-done:
 			return nil
 		case m := <-messageOut:
-			logger.Infof("Send Message %s", m)
+			logger.Debugf("Send Message %s", m)
 			err := conn.WriteJSON(m)
 			if err != nil {
 				logger.Errorf("write message out: %v", err)
