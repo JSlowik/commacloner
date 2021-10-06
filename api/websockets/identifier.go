@@ -14,6 +14,7 @@ type User struct {
 
 // Message the message to be sent to the websocket url
 type Message struct {
-	Identifier string `json:"identifier"`
-	Command    string `json:"command"`
+	Identifier string `json:"identifier,omitempty"`
+	Command    string `json:"command,omitempty"`
+	Type       string `json:"type,omitempty"`
 }

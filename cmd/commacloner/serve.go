@@ -1,12 +1,14 @@
 package main
 
 import (
-	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/jslowik/commacloner/api/websockets"
-	"github.com/jslowik/commacloner/recws"
+	"go.uber.org/zap"
+
+	//"go.uber.org/zap"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -32,10 +34,6 @@ func commandServe() *cobra.Command {
 		},
 	}
 }
-
-var (
-	ws *recws.RecConn
-)
 
 func serve(args []string) error {
 	switch len(args) {
@@ -77,9 +75,6 @@ func serve(args []string) error {
 		botMap[mapping.Source.ID] = append(botMap[mapping.Source.ID], mapping)
 	}
 
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt) // Notify the interrupt channel for SIGINT
-
 	//Make the subscription message
 	stream := websockets.DealsStream{
 		APIConfig: c.API,
@@ -91,30 +86,88 @@ func serve(args []string) error {
 		return err
 	}
 
-	ctx := context.TODO()
-	ws := recws.RecConn{
-		KeepAliveTimeout: 10 * time.Second,
+	messageOut := make(chan *websockets.Message)
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+
+	conn, err := generateConnection(nil, c.API.WebsocketURL, logger)
+	if err != nil {
+		logger.Fatalf("could not make connection to websocket: %v", err)
+		return err
 	}
 
-	ws.SubscribeHandler = func() error {
-		return ws.WriteJSON(subscriptionMessage)
-	}
-
-	ws.Dial(c.API.WebsocketURL, nil)
-
+	//When the program closes close the connection
+	defer conn.Close()
 	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		pong := websockets.Message{Type: "pong"}
+
+		for {
+			msgType, message, readErr := conn.ReadMessage()
+			if readErr != nil {
+				if websocket.IsCloseError(readErr, websocket.CloseAbnormalClosure) {
+					logger.Warnf("abonormal close error. trying resubscribe: %v", readErr)
+					conn, err = generateConnection(conn, c.API.WebsocketURL, logger)
+					if err != nil {
+						logger.Fatalf("could not regenerate connection: %v", err)
+						return
+					}
+					logger.Infof("connection restablished")
+					continue
+				} else {
+					logger.Warnf("other read error, breaking: %v", readErr)
+					return
+				}
+			}
+			logger.Debugf("recv: type - %d message - %s", msgType, message)
+
+			ctrlMessage := websockets.Message{}
+			if unmarshalError := json.Unmarshal(message, &ctrlMessage); unmarshalError == nil {
+				switch ctrlMessage.Type {
+				case "welcome":
+					logger.Infof("received welcome, sending subscription: %s", subscriptionMessage)
+					messageOut <- subscriptionMessage
+				case "ping":
+					logger.Debugf("received ping, sending pong: %s", message)
+					messageOut <- &pong
+				case "confirm_subscription":
+					logger.Infof("received subscription confirmed : %s", message)
+				default:
+					logger.Debugf("received other message %v", ctrlMessage.Type)
+					dealErr := stream.HandleDeal(message, l)
+					if dealErr != nil {
+						logger.Errorf("could not handle message from deals stream: %v", dealErr)
+					}
+				}
+			}
+		}
+	}()
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 	for {
 		select {
-		case <-ctx.Done():
-			go ws.Close()
-			logger.Warnf("Websocket closed %s", ws.GetURL())
+		case <-done:
 			return nil
+		case m := <-messageOut:
+			logger.Infof("Send Message %s", m)
+			err := conn.WriteJSON(m)
+			if err != nil {
+				logger.Errorf("write message out: %v", err)
+				return err
+			}
+		case t := <-ticker.C:
+			err := conn.WriteMessage(websocket.TextMessage, []byte(t.String()))
+			if err != nil {
+				logger.Errorf("write ticker: %v", err)
+				return err
+			}
 		case <-interrupt:
 			logger.Infof("interrupt")
-
 			// Cleanly close the connection by sending a close message and then
 			// waiting (with timeout) for the server to close the connection.
-			err := ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if err != nil {
 				logger.Errorf("write close: %v", err)
 				return err
@@ -124,30 +177,24 @@ func serve(args []string) error {
 			case <-time.After(time.Second):
 			}
 			return nil
-		default:
-			if !ws.IsConnected() {
-				logger.Errorf("Websocket disconnected %s", ws.GetURL())
-				for !ws.IsConnected() {
-					logger.Infof("still disconnected.  sleepting for 2 seconds")
-					time.Sleep(2 * time.Second)
-				}
-				continue
-			}
-
-			_, message, err := ws.ReadMessage()
-			if err != nil {
-				logger.Errorf("Error: ReadMessage: %v", err)
-				continue
-			}
-
-			logger.Debugf("recv: %s", message)
-			err = stream.HandleDeal(message, l)
-			if err != nil {
-				logger.Errorf("could not handle message from deals stream: %v", err)
-			}
-
-
-			logger.Infof("Success: %s", message)
 		}
 	}
+}
+
+func generateConnection(existingConnection *websocket.Conn, url string, logger *zap.SugaredLogger) (*websocket.Conn, error) {
+	if existingConnection != nil {
+		logger.Warnf("closing existing connection")
+		err := existingConnection.Close()
+		if err != nil {
+			logger.Errorf("error closing existing connection: %v", err)
+		}
+	}
+
+	logger.Infof("connecting to %s", url)
+	conn, resp, err := websocket.DefaultDialer.Dial(url, nil)
+	if err != nil {
+		logger.Errorf("handshake failed with status %d, error %v", resp.StatusCode, err)
+		logger.Fatalf("dial: %v ", err)
+	}
+	return conn, err
 }
