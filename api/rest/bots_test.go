@@ -80,7 +80,6 @@ func TestStartNewDeal(t *testing.T) {
 			apiConfig: config.API{
 				Key:    "abcd1234",
 				Secret: "zyxw9876",
-				// RestURL:      test3CServer.URL,
 			},
 			bot: config.BotMapping{
 				ID: "standard_mapping",
@@ -103,7 +102,6 @@ func TestStartNewDeal(t *testing.T) {
 			apiConfig: config.API{
 				Key:    "abcd1234",
 				Secret: "zyxw9876",
-				// RestURL: test3CServer.URL,
 			},
 			bot: config.BotMapping{
 				ID: "standard_mapping",

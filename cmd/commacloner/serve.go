@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jslowik/commacloner/api"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -121,7 +122,7 @@ func serve(args []string) error {
 			}
 			logger.Debugf("recv: type - %d message - %s", msgType, message)
 
-			ctrlMessage := websockets.Message{}
+			ctrlMessage := api.Message{}
 			if unmarshalError := json.Unmarshal(message, &ctrlMessage); unmarshalError == nil {
 				switch ctrlMessage.Type {
 				case "welcome":
@@ -131,14 +132,22 @@ func serve(args []string) error {
 					logger.Debugf("received ping, sending pong: %s", message)
 					messageOut <- &pong
 				case "confirm_subscription":
-					logger.Infof("received subscription confirmed : %s", message)
-				default:
-					logger.Debugf("received other message %v", ctrlMessage.Type)
-					dealErr := stream.HandleDeal(message, l)
+					logger.Infof("subscription confirmed : %s", message)
+				case "Deal":
+				case "Deal::ShortDeal":
+					logger.Infof("received deal %v", ctrlMessage.Message)
+					dealMessage := api.DealsMessage{}
+					var dealErr error
+					if dealErr = json.Unmarshal(message, &dealMessage); dealErr == nil {
+						dealErr = stream.HandleDeal(dealMessage, l)
+					}
 					if dealErr != nil {
 						logger.Errorf("could not handle message from deals stream: %v", dealErr)
 					}
+				default:
+					logger.Warnf("unsupported message type %s : %v", ctrlMessage.Type, string(message))
 				}
+
 			}
 		}
 	}()

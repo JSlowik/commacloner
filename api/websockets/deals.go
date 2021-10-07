@@ -53,45 +53,29 @@ func (d DealsStream) Build() (*Message, error) {
 }
 
 // HandleDeal reads messages from the websocket connection and handles the deal
-func (d DealsStream) HandleDeal(rawMessage []byte, logger *zap.Logger) error {
+func (d DealsStream) HandleDeal(deal api.DealsMessage, logger *zap.Logger) error {
 	log := logger.Sugar()
 
-	// Ping Messages
-	var ping api.Ping
-	err := json.Unmarshal(rawMessage, &ping)
-	if err == nil {
-		return nil
-	}
-
-	// Deals Messages
-	var deal api.Deal
-	err = json.Unmarshal(rawMessage, &deal)
-	if err == nil {
-		details := deal.Details
-		if details.Status == "bought" && details.CompletedSafetyOrdersCount == 0 && details.CompletedManualSafetyOrdersCount == 0 {
-			log.Infof("got new deal - bot id: %d, pair %s", details.BotID, details.Pair)
-			if d.Bots == nil {
-				return errors.New("no bots defined")
-			}
-			// Determine if we have a mapping which uses this source deal
-			for _, bot := range d.Bots[details.BotID] {
-				log.Infof("start new deal for bot %d using pair %s)", bot.Destination, details.Pair)
-				err = rest.StartNewDeal(d.APIConfig, bot, details.Pair, logger)
-				if err != nil {
-					log.Warnf("could not start new deal: %v", err)
-					if bot.Overrides.CancelUnavailableDeals {
-						e2 := rest.CancelDeal(d.APIConfig, details.ID, bot.Overrides.PanicSellUnavailableDeals, logger)
-						if e2 != nil {
-							return fmt.Errorf("could not cancel deal: %v", e2)
-						}
+	details := deal.Details
+	if details.Status == "bought" && details.CompletedSafetyOrdersCount == 0 && details.CompletedManualSafetyOrdersCount == 0 {
+		log.Infof("got new deal - bot id: %d, pair %s", details.BotID, details.Pair)
+		if d.Bots == nil {
+			return errors.New("no bots defined")
+		}
+		// Determine if we have a mapping which uses this source deal
+		for _, bot := range d.Bots[details.BotID] {
+			log.Infof("start new deal for bot %d using pair %s", bot.Destination.ID, details.Pair)
+			err := rest.StartNewDeal(d.APIConfig, bot, details.Pair, logger)
+			if err != nil {
+				log.Warnf("could not start new deal: %v", err)
+				if bot.Overrides.CancelUnavailableDeals {
+					e2 := rest.CancelDeal(d.APIConfig, details.ID, bot.Overrides.PanicSellUnavailableDeals, logger)
+					if e2 != nil {
+						return fmt.Errorf("could not cancel deal: %v", e2)
 					}
 				}
 			}
 		}
-		return nil
 	}
-
-	// Unsupported Message Type
-	log.Warnf("unsupported message type %v", string(rawMessage))
 	return nil
 }
