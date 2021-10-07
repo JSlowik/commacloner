@@ -133,7 +133,7 @@ func CancelDeal(apiConfig config.API, dealID int, panicSell bool, l *zap.Logger)
 	switch resp.StatusCode {
 	case http.StatusCreated:
 		break
-	case 422:
+	case http.StatusUnprocessableEntity:
 		logger.Warnf("cannot cancel deal: %s", string(responseBody))
 	default:
 		return fmt.Errorf("bad status %d - %s", resp.StatusCode, string(responseBody))
