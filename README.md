@@ -1,6 +1,6 @@
 # CommaCloner - A 3Commas Deal Duplicator
 [![Go Report Card](https://goreportcard.com/badge/github.com/jslowik/commacloner?style=flat-square)](https://goreportcard.com/report/github.com/jslowik/commacloner)
-[![codecov](https://codecov.io/gh/JSlowik/commacloner/branch/main/graph/badge.svg?token=BKLAXDBDGT)](https://codecov.io/gh/JSlowik/CommaCloner)
+[![codecov](https://codecov.io/gh/JSlowik/CommaCloner/branch/main/graph/badge.svg?token=4O1R4deyMZ)](https://codecov.io/gh/JSlowik/CommaCloner)
 
 ## NOTICE 
 This is a pre-alpha build that I am still testing and expanding on.  The mappings work paper trading to paper trading, so 
