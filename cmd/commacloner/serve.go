@@ -106,7 +106,7 @@ func serve(args []string) error {
 		for {
 			msgType, message, readErr := conn.ReadMessage()
 			if readErr != nil {
-				if websocket.IsCloseError(readErr, websocket.CloseAbnormalClosure) {
+				if !websocket.IsCloseError(readErr, websocket.CloseNormalClosure) {
 					logger.Warnf("abonormal close error. trying resubscribe: %v", readErr)
 					conn, err = generateConnection(conn, c.API.WebsocketURL, logger)
 					if err != nil {
@@ -115,9 +115,6 @@ func serve(args []string) error {
 					}
 					logger.Infof("connection restablished")
 					continue
-				} else {
-					logger.Warnf("other read error, breaking: %v", readErr)
-					return
 				}
 			}
 			logger.Debugf("recv: type - %d message - %s", msgType, message)
