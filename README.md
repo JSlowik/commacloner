@@ -97,6 +97,9 @@ bots:
 ## Getting help
 - For feature requests and bugs, file an [issue](https://github.com/jslowik/CommaCloner/issues).
 
+## Roadmap
+- To learn about new/upcoming features I may be pondering, check the [roadmap](https://github.com/JSlowik/commacloner/wiki/Roadmap) in the wiki
+
 ## Tip Jar
 - BTC `3Ec8nc2kxKSZukwokG3L3s23EyiswWuQGQ`
 - ETH `0xf1AD69127AE25f84F660B3A6C6cDdcd77716484F`
