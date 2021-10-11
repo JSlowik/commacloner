@@ -61,11 +61,12 @@ func serve(args []string) error {
 	}
 
 	//init logging
-	l, err := log.InitWithConfiguration(c.Logging.Level, c.Logging.Format)
+	//l, err := log.InitWithConfiguration(c.Logging.Level, c.Logging.Format)
+	err = log.InitWithConfiguration(c.Logging)
 	if err != nil {
 		return fmt.Errorf("invalid config: %v", err)
 	}
-	logger := l.Sugar()
+	logger := log.NewLogger("serve")
 	logger.Info("logging configured")
 
 	//log mappings
@@ -120,23 +121,20 @@ func serve(args []string) error {
 			logger.Debugf("recv: type - %d message - %s", msgType, message)
 
 			ctrlMessage := api.Message{}
+			pingMessage := api.PingMessage{}
 			if unmarshalError := json.Unmarshal(message, &ctrlMessage); unmarshalError == nil {
 				switch ctrlMessage.Type {
 				case "welcome":
 					logger.Infof("received welcome, sending subscription: %s", subscriptionMessage)
 					messageOut <- subscriptionMessage
-				case "ping":
-					logger.Debugf("received ping, sending pong: %s", message)
-					messageOut <- &pong
 				case "confirm_subscription":
 					logger.Infof("subscription confirmed : %s", message)
-				case "Deal":
-				case "Deal::ShortDeal":
-					logger.Infof("received deal %v", ctrlMessage.Message)
+				case "Deal", "Deal::ShortDeal":
+					logger.Debugf("received deal %v", ctrlMessage.Message)
 					dealMessage := api.DealsMessage{}
 					var dealErr error
 					if dealErr = json.Unmarshal(message, &dealMessage); dealErr == nil {
-						dealErr = stream.HandleDeal(dealMessage, l)
+						dealErr = stream.HandleDeal(dealMessage)
 					}
 					if dealErr != nil {
 						logger.Errorf("could not handle message from deals stream: %v", dealErr)
@@ -145,6 +143,9 @@ func serve(args []string) error {
 					logger.Warnf("unsupported message type %s : %v", ctrlMessage.Type, string(message))
 				}
 
+			} else if e := json.Unmarshal(message, &pingMessage); e == nil {
+				logger.Debugf("received ping, sending pong: %s", message)
+				messageOut <- &pong
 			}
 		}
 	}()

@@ -2,48 +2,97 @@ package log
 
 import (
 	"fmt"
-	"os"
-	"sync"
-
+	"github.com/jslowik/commacloner/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
+	"net/url"
+	"os"
+	"path/filepath"
 )
 
 var (
-	once        sync.Once
-	instance    *zap.Logger
-	serverError error
+	globalLogger *zap.Logger
 )
 
-// InitWithConfiguration initializes the logger with the set default log level and format.
-func InitWithConfiguration(level, format string) (*zap.Logger, error) {
-	once.Do(func() {
-		instance, serverError = newLogger(level, format)
-	})
-	return instance, serverError
+type lumberjackSink struct {
+	*lumberjack.Logger
 }
 
-func newLogger(level string, format string) (*zap.Logger, error) {
+func (lumberjackSink) Sync() error {
+	return nil
+}
+
+// InitWithConfiguration initializes the logger with the set default log level and format.
+func InitWithConfiguration(config config.Logger) error {
 	var lvl zap.AtomicLevel
-	err := lvl.UnmarshalText([]byte(level))
+	err := lvl.UnmarshalText([]byte(config.Level))
 	if err != nil {
-		return nil, fmt.Errorf("invalid log level: %v", err)
+		return fmt.Errorf("invalid log level: %v", err)
 	}
 
 	cnfg := zap.NewProductionConfig()
 	cnfg.Level = lvl
-	cnfg.Encoding = format
+	cnfg.Encoding = config.Format
 	cnfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	cnfg.OutputPaths = []string{"stderr"}
 
-	logger, err := cnfg.Build()
-	if err != nil {
-		panic(err)
-	}
-	defer func(logger *zap.Logger) {
-		err := logger.Sync()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
+	if config.Destination == "file" {
+		logFile := "./logs/commacloner.log"
+		e := createDir("./logs")
+		if e != nil {
+			return fmt.Errorf("could not create log directory: %v", e)
 		}
-	}(logger)
-	return logger, nil
+		ll := lumberjack.Logger{
+			Filename:   logFile,
+			MaxSize:    1024, //MB
+			MaxBackups: 5,
+			MaxAge:     90, //days
+			Compress:   true,
+		}
+		e = zap.RegisterSink("lumberjack", func(*url.URL) (zap.Sink, error) {
+			return lumberjackSink{
+				Logger: &ll,
+			}, nil
+		})
+		if e != nil {
+			return e
+		}
+		cnfg.OutputPaths = append(cnfg.OutputPaths, fmt.Sprintf("lumberjack:%s", logFile))
+	}
+
+	_globalLogger, err := cnfg.Build()
+	if err != nil {
+		panic(fmt.Sprintf("build zap logger from config error: %v", err))
+	}
+	zap.ReplaceGlobals(_globalLogger)
+	globalLogger = _globalLogger
+	return nil
+}
+
+// IsDir returns true if the given path is an existing directory.
+func createDir(path string) error {
+	if pathAbs, err := filepath.Abs(path); err == nil {
+		if fileInfo, err := os.Stat(pathAbs); !os.IsNotExist(err) && fileInfo.IsDir() {
+			return nil
+		} else if e := os.MkdirAll(path, os.ModePerm); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
+func NewLogger(name string) *zap.SugaredLogger {
+	if globalLogger == nil {
+		c := config.Logger{
+			Level:       "debug",
+			Format:      "console",
+			Destination: "console",
+		}
+		err := InitWithConfiguration(c)
+		if err != nil {
+			return nil
+		}
+	}
+	return globalLogger.Named(name).Sugar()
 }

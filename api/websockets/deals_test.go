@@ -3,7 +3,6 @@ package websockets
 import (
 	"github.com/gorilla/mux"
 	"github.com/jslowik/commacloner/api"
-	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -244,7 +243,7 @@ func TestDealsStream_HandleDeal(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			logger := zap.NewExample()
+			//logger := zap.NewExample()
 			test3CServer, _ := NewTest3CServer(tt.handler.handlerPath, tt.handler.handler)
 
 			d := DealsStream{
@@ -252,7 +251,7 @@ func TestDealsStream_HandleDeal(t *testing.T) {
 				Bots:      tt.botMaps,
 			}
 			d.APIConfig.RestURL = test3CServer.URL
-			if err := d.HandleDeal(tt.deal, logger); (err != nil) != tt.wantErr {
+			if err := d.HandleDeal(tt.deal); (err != nil) != tt.wantErr {
 				t.Errorf("HandleDeal() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

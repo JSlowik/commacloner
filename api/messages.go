@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 )
 
 type Message struct {
@@ -58,10 +59,10 @@ type DealDetails struct {
 
 type PingMessage struct {
 	Message
-	Time int64 `json:"message,omitempty"`
+	Time float64 `json:"message,omitempty"`
 }
 
-func (d *DealsMessage) UnmarshalJSON(data []byte) error {
+func (d *PingMessage) UnmarshalJSON(data []byte) error {
 
 	m := make(map[string]interface{})
 	if e := json.Unmarshal(data, &m); e != nil {
@@ -71,6 +72,25 @@ func (d *DealsMessage) UnmarshalJSON(data []byte) error {
 	if m["type"] != nil {
 		d.Type = m["type"].(string)
 	}
+	if m["identifier"] != nil {
+		d.Identifier = m["identifier"].(string)
+	}
+
+	if d.Type != "ping" {
+		return errors.New("not a ping message")
+	}
+
+	d.Time = m["message"].(float64)
+	return nil
+}
+
+func (d *DealsMessage) UnmarshalJSON(data []byte) error {
+
+	m := make(map[string]interface{})
+	if e := json.Unmarshal(data, &m); e != nil {
+		return e
+	}
+
 	if m["identifier"] != nil {
 		d.Identifier = m["identifier"].(string)
 	}

@@ -7,7 +7,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jslowik/commacloner/config"
-	"go.uber.org/zap"
 )
 
 const (
@@ -39,7 +38,6 @@ func newTest3CServer(customPath string, customFunc func(w http.ResponseWriter, r
 }
 
 func TestStartNewDeal(t *testing.T) {
-	logger := zap.NewExample()
 	type customHandlerFields struct {
 		handlerPath string
 		handler     func(w http.ResponseWriter, r *http.Request)
@@ -153,7 +151,7 @@ func TestStartNewDeal(t *testing.T) {
 			test3CServer, _ := newTest3CServer(tt.handler.handlerPath, tt.handler.handler)
 			tt.apiConfig.RestURL = test3CServer.URL
 
-			if err := StartNewDeal(tt.apiConfig, tt.bot, tt.pair, logger); (err != nil) != tt.wantErr {
+			if err := StartNewDeal(tt.apiConfig, tt.bot, tt.pair); (err != nil) != tt.wantErr {
 				t.Errorf("StartNewDeal() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -187,7 +185,6 @@ func Test_generateQuery(t *testing.T) {
 }
 
 func TestCancelDeal(t *testing.T) {
-	logger := zap.NewExample()
 	type customHandlerFields struct {
 		handlerPath string
 		handler     func(w http.ResponseWriter, r *http.Request)
@@ -236,7 +233,7 @@ func TestCancelDeal(t *testing.T) {
 			test3CServer, _ := newTest3CServer(tt.handler.handlerPath, tt.handler.handler)
 			tt.apiConfig.RestURL = test3CServer.URL
 
-			if err := CancelDeal(tt.apiConfig, 1234, tt.panicSell, logger); (err != nil) != tt.wantErr {
+			if err := CancelDeal(tt.apiConfig, 1234, tt.panicSell); (err != nil) != tt.wantErr {
 				t.Errorf("StartNewDeal() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
