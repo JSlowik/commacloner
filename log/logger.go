@@ -50,11 +50,14 @@ func InitWithConfiguration(config config.Logger) error {
 			MaxAge:     90, //days
 			Compress:   true,
 		}
-		zap.RegisterSink("lumberjack", func(*url.URL) (zap.Sink, error) {
+		e = zap.RegisterSink("lumberjack", func(*url.URL) (zap.Sink, error) {
 			return lumberjackSink{
 				Logger: &ll,
 			}, nil
 		})
+		if e != nil {
+			return e
+		}
 		cnfg.OutputPaths = append(cnfg.OutputPaths, fmt.Sprintf("lumberjack:%s", logFile))
 	}
 
@@ -86,7 +89,10 @@ func NewLogger(name string) *zap.SugaredLogger {
 			Format:      "console",
 			Destination: "console",
 		}
-		InitWithConfiguration(c)
+		err := InitWithConfiguration(c)
+		if err != nil {
+			return nil
+		}
 	}
 	return globalLogger.Named(name).Sugar()
 }

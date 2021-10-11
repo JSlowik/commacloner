@@ -121,14 +121,12 @@ func serve(args []string) error {
 			logger.Debugf("recv: type - %d message - %s", msgType, message)
 
 			ctrlMessage := api.Message{}
+			pingMessage := api.PingMessage{}
 			if unmarshalError := json.Unmarshal(message, &ctrlMessage); unmarshalError == nil {
 				switch ctrlMessage.Type {
 				case "welcome":
 					logger.Infof("received welcome, sending subscription: %s", subscriptionMessage)
 					messageOut <- subscriptionMessage
-				case "ping":
-					logger.Debugf("received ping, sending pong: %s", message)
-					messageOut <- &pong
 				case "confirm_subscription":
 					logger.Infof("subscription confirmed : %s", message)
 				case "Deal", "Deal::ShortDeal":
@@ -145,6 +143,9 @@ func serve(args []string) error {
 					logger.Warnf("unsupported message type %s : %v", ctrlMessage.Type, string(message))
 				}
 
+			} else if e := json.Unmarshal(message, &pingMessage); e == nil {
+				logger.Debugf("received ping, sending pong: %s", message)
+				messageOut <- &pong
 			}
 		}
 	}()
