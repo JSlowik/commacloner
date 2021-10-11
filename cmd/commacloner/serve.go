@@ -131,8 +131,7 @@ func serve(args []string) error {
 					messageOut <- &pong
 				case "confirm_subscription":
 					logger.Infof("subscription confirmed : %s", message)
-				case "Deal":
-				case "Deal::ShortDeal":
+				case "Deal", "Deal::ShortDeal":
 					logger.Debugf("received deal %v", ctrlMessage.Message)
 					dealMessage := api.DealsMessage{}
 					var dealErr error
