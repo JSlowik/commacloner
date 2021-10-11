@@ -9,8 +9,9 @@ import (
 func TestConfig_Validate(t *testing.T) {
 	baselineConfig := Config{
 		Logging: Logger{
-			Level:  zap.DebugLevel.String(),
-			Format: "json",
+			Level:       zap.DebugLevel.String(),
+			Format:      "json",
+			Destination: "console",
 		},
 		API: API{
 			Key:          "abcd1234",
@@ -162,8 +163,9 @@ func TestConfig_Validate(t *testing.T) {
 			name: "bad log format",
 			config: Config{
 				Logging: Logger{
-					Level:  "debug",
-					Format: "html",
+					Level:       "debug",
+					Format:      "html",
+					Destination: "console",
 				},
 				API:  baselineConfig.API,
 				Bots: baselineConfig.Bots,
@@ -174,8 +176,22 @@ func TestConfig_Validate(t *testing.T) {
 			name: "invalid log level",
 			config: Config{
 				Logging: Logger{
-					Level:  "fakelevel",
-					Format: "json",
+					Level:       "fakelevel",
+					Format:      "json",
+					Destination: "console",
+				},
+				API:  baselineConfig.API,
+				Bots: baselineConfig.Bots,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid log destination",
+			config: Config{
+				Logging: Logger{
+					Level:       "debug",
+					Format:      "json",
+					Destination: "/my/fake/path",
 				},
 				API:  baselineConfig.API,
 				Bots: baselineConfig.Bots,

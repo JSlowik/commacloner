@@ -2,6 +2,7 @@ package rest
 
 import (
 	"fmt"
+	"github.com/jslowik/commacloner/log"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/jslowik/commacloner/api"
 	"github.com/jslowik/commacloner/config"
-	"go.uber.org/zap"
 )
 
 const (
@@ -38,8 +38,8 @@ func generateQuery(path string, queryParameters map[string]string) *url.URL {
 }
 
 // StartNewDeal invokes the API to start a new deal based on the bot mapping for the given pair
-func StartNewDeal(apiConfig config.API, bot config.BotMapping, pair string, l *zap.Logger) error {
-	logger := l.Sugar()
+func StartNewDeal(apiConfig config.API, bot config.BotMapping, pair string) error {
+	logger := log.NewLogger("bots")
 	route := fmt.Sprintf(StartNewBotDeal, bot.Destination.ID)
 	path := apiConfig.RestURL + route
 
@@ -94,8 +94,8 @@ func StartNewDeal(apiConfig config.API, bot config.BotMapping, pair string, l *z
 }
 
 // CancelDeal cancels an existing deal
-func CancelDeal(apiConfig config.API, dealID int, panicSell bool, l *zap.Logger) error {
-	logger := l.Sugar()
+func CancelDeal(apiConfig config.API, dealID int, panicSell bool) error {
+	logger := log.NewLogger("CancelDeal")
 	route := fmt.Sprintf(CancelBotDeal, dealID)
 
 	if panicSell {

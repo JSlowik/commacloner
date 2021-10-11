@@ -61,11 +61,12 @@ func serve(args []string) error {
 	}
 
 	//init logging
-	l, err := log.InitWithConfiguration(c.Logging.Level, c.Logging.Format)
+	//l, err := log.InitWithConfiguration(c.Logging.Level, c.Logging.Format)
+	err = log.InitWithConfiguration(c.Logging)
 	if err != nil {
 		return fmt.Errorf("invalid config: %v", err)
 	}
-	logger := l.Sugar()
+	logger := log.NewLogger("serve")
 	logger.Info("logging configured")
 
 	//log mappings
@@ -132,11 +133,11 @@ func serve(args []string) error {
 					logger.Infof("subscription confirmed : %s", message)
 				case "Deal":
 				case "Deal::ShortDeal":
-					logger.Infof("received deal %v", ctrlMessage.Message)
+					logger.Debugf("received deal %v", ctrlMessage.Message)
 					dealMessage := api.DealsMessage{}
 					var dealErr error
 					if dealErr = json.Unmarshal(message, &dealMessage); dealErr == nil {
-						dealErr = stream.HandleDeal(dealMessage, l)
+						dealErr = stream.HandleDeal(dealMessage)
 					}
 					if dealErr != nil {
 						logger.Errorf("could not handle message from deals stream: %v", dealErr)

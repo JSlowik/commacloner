@@ -4,6 +4,8 @@ logging:
   level: "debug"
   # "console" or "json" are the valid formats
   format: "console"
+  #log destination.  "console" just prints to stderr, "file" will print to "./logs/commacloner.log"
+  detination: "console"
 # The 3Commas API key and secret.
 # NOTE you should not need to touch the websocket_url or rest_url.  This are only left as configuration items in the off
 # chance 3commas changes their api endpoint

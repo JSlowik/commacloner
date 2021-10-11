@@ -21,6 +21,9 @@ type Logger struct {
 
 	// Format specifies the format to be used for logging.
 	Format string `json:"format"`
+
+	//Destination
+	Destination string `json:"destination"`
 }
 
 // API contains the configuration elementsd for the 3commas API
@@ -98,6 +101,8 @@ func (c Logger) validate() []string {
 		errMsg string
 	}{
 		{c.Format == "" || c.Format != "json" && c.Format != "console", "log format must be \"json\" or \"console\""},
+
+		{c.Destination == "" || c.Destination != "file" && c.Destination != "console", "log destination must be \"file\" or \"console\""},
 	}
 
 	var checkErrors []string
