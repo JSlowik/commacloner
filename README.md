@@ -3,8 +3,7 @@
 [![codecov](https://codecov.io/gh/JSlowik/CommaCloner/branch/main/graph/badge.svg?token=4O1R4deyMZ)](https://codecov.io/gh/JSlowik/CommaCloner)
 
 ## NOTICE 
-This is a pre-alpha build that I am still testing and expanding on.  The mappings work paper trading to paper trading, so 
-people are welcome to test out the configs and stability.  USE ON YOUR LIVE ACCOUNT AT YOUR OWN RISK
+If you want to test this utility without risking real money/crypto, it is feasible to have mappings redirect deals from a paper trading bot to another paper trading bot.  Use on a live account at your own risk.  
 ## 
 
 CommaCloner leverages both the [3Commas Deals Websocket and Bots API](https://github.com/3commas-io/3commas-official-api-docs) 
