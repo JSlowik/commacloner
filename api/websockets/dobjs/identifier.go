@@ -1,4 +1,4 @@
-package websockets
+package dobjs
 
 // Identifier the websocket identifier
 type Identifier struct {

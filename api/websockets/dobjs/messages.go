@@ -1,4 +1,4 @@
-package websockets
+package dobjs
 
 import (
 	"encoding/json"

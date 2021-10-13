@@ -1,6 +1,7 @@
 package websockets
 
 import (
+	"github.com/jslowik/commacloner/api/websockets/dobjs"
 	"testing"
 )
 
@@ -20,7 +21,7 @@ func TestDealsMessage_UnmarshalJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &DealsMessage{}
+			d := &dobjs.DealsMessage{}
 			if err := d.UnmarshalJSON([]byte(tt.payload)); (err != nil) != tt.wantErr {
 				t.Errorf("UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -47,7 +48,7 @@ func TestMessage_UnmarshalJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &Message{}
+			d := &dobjs.Message{}
 			if err := d.UnmarshalJSON([]byte(tt.payload)); (err != nil) != tt.wantErr {
 				t.Errorf("UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -74,7 +75,7 @@ func TestPingMessage_UnmarshalJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &PingMessage{}
+			d := &dobjs.PingMessage{}
 			if err := d.UnmarshalJSON([]byte(tt.payload)); (err != nil) != tt.wantErr {
 				t.Errorf("UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
 			}

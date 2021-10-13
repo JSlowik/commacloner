@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jslowik/commacloner/api/websockets/dobjs"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -86,7 +87,7 @@ func serve(args []string) error {
 		return err
 	}
 
-	messageOut := make(chan *websockets.IdentifierMessage)
+	messageOut := make(chan *dobjs.IdentifierMessage)
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
@@ -101,7 +102,7 @@ func serve(args []string) error {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		pong := websockets.IdentifierMessage{Type: "pong"}
+		pong := dobjs.IdentifierMessage{Type: "pong"}
 
 		for {
 			msgType, message, readErr := conn.ReadMessage()
@@ -119,8 +120,8 @@ func serve(args []string) error {
 			}
 			logger.Debugf("recv: type - %d message - %s", msgType, message)
 
-			ctrlMessage := websockets.Message{}
-			pingMessage := websockets.PingMessage{}
+			ctrlMessage := dobjs.Message{}
+			pingMessage := dobjs.PingMessage{}
 			if unmarshalError := json.Unmarshal(message, &ctrlMessage); unmarshalError == nil {
 				switch ctrlMessage.Type {
 				case "welcome":
@@ -130,7 +131,7 @@ func serve(args []string) error {
 					logger.Infof("subscription confirmed : %s", message)
 				case "Deal", "Deal::ShortDeal":
 					logger.Debugf("received deal %v", ctrlMessage.Message)
-					dealMessage := websockets.DealsMessage{}
+					dealMessage := dobjs.DealsMessage{}
 					var dealErr error
 					if dealErr = json.Unmarshal(message, &dealMessage); dealErr == nil {
 						dealErr = stream.HandleDeal(dealMessage)
