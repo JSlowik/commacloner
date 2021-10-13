@@ -9,9 +9,10 @@ import (
 
 // Config is the top level of the configuration yaml
 type Config struct {
-	API     API          `json:"api"`
-	Bots    []BotMapping `json:"bots"`
-	Logging Logger       `json:"logging"`
+	API           API           `json:"api"`
+	LunarcrushAPI LunarCrushAPI `json:"lunarcrush"`
+	Bots          []BotMapping  `json:"bots"`
+	Logging       Logger        `json:"logging"`
 }
 
 // Logger holds configuration required to customize logging
@@ -26,12 +27,17 @@ type Logger struct {
 	Destination string `json:"destination"`
 }
 
-// API contains the configuration elementsd for the 3commas API
+// API contains the configuration elements for an API
 type API struct {
 	Key          string `json:"key"`
 	Secret       string `json:"secret"`
 	WebsocketURL string `json:"websocket_url"`
 	RestURL      string `json:"rest_url"`
+}
+
+type LunarCrushAPI struct {
+	Key     string `json:"key"`
+	RestURL string `json:"rest_url"`
 }
 
 // BotMapping contains both a source bot id to look for deals from the websockets api, and a destination bot to generate
@@ -80,8 +86,11 @@ func (c Config) Validate() error {
 	// Validate the logging configs
 	checkErrors = append(checkErrors, c.Logging.validate()...)
 
-	// Validate the API configs
+	// Validate the 3Commas API configs
 	checkErrors = append(checkErrors, c.API.validate()...)
+
+	// Validate the Lunarcrush API configs
+	checkErrors = append(checkErrors, c.LunarcrushAPI.validate()...)
 
 	// Validate the bot mappings
 	for _, mapping := range c.Bots {
@@ -129,6 +138,26 @@ func (c API) validate() []string {
 		{c.Key == "", "no api key specified in config file"},
 		{c.Secret == "", "no api secret in config file"},
 		{c.WebsocketURL == "", "no websocket url defined"},
+		{c.RestURL == "", "no rest url defined"},
+	}
+
+	var checkErrors []string
+
+	for _, check := range checks {
+		if check.bad {
+			checkErrors = append(checkErrors, check.errMsg)
+		}
+	}
+	return checkErrors
+}
+
+func (c LunarCrushAPI) validate() []string {
+	// Fast checks. Perform these first for a more responsive CLI.
+	checks := []struct {
+		bad    bool
+		errMsg string
+	}{
+		{c.Key == "", "no api key specified in config file"},
 		{c.RestURL == "", "no rest url defined"},
 	}
 

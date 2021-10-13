@@ -6,7 +6,7 @@ logging:
   format: "console"
   #log destination.  "console" just prints to stderr, "file" will print to "./logs/commacloner.log"
   destination: "console"
-# The 3Commas API key and secret.
+# The 3Commas API key and secret.  Need at least bots_read, bots_write, and accounts_read permissions
 # NOTE you should not need to touch the websocket_url or rest_url.  This are only left as configuration items in the off
 # chance 3commas changes their api endpoint
 api:

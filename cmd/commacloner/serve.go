@@ -87,6 +87,14 @@ func serve(args []string) error {
 		return err
 	}
 
+	//test, err := rest.GetBot(c.API, 99999)
+	//if err != nil {
+	//	logger.Fatalf("err: %v", err)
+	//	return err
+	//} else  {
+	//	logger.Infof("got bot: %v", test)
+	//}
+
 	messageOut := make(chan *websockets.Message)
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
