@@ -12,8 +12,8 @@ type User struct {
 	Signature string `json:"signature"`
 }
 
-// Message the message to be sent to the websocket url
-type Message struct {
+// IdentifierMessage the message to be sent to the websocket url to subscribe to a stream
+type IdentifierMessage struct {
 	Identifier string `json:"identifier,omitempty"`
 	Command    string `json:"command,omitempty"`
 	Type       string `json:"type,omitempty"`

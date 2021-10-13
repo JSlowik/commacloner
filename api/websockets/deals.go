@@ -38,21 +38,21 @@ func (d DealsStream) buildIdentifier() Identifier {
 }
 
 // Build constructs the deals websocket subscription
-func (d DealsStream) Build() (*Message, error) {
+func (d DealsStream) Build() (*IdentifierMessage, error) {
 	identifier := d.buildIdentifier()
 	identifierStr, err := json.Marshal(identifier)
 	if err != nil {
 		return nil, fmt.Errorf("could not marshall identifier: %v", err)
 	}
 
-	return &Message{
+	return &IdentifierMessage{
 		Identifier: string(identifierStr),
 		Command:    "subscribe",
 	}, nil
 }
 
 // HandleDeal reads messages from the websocket connection and handles the deal
-func (d DealsStream) HandleDeal(deal api.DealsMessage) error {
+func (d DealsStream) HandleDeal(deal DealsMessage) error {
 	logger := log.NewLogger("deals")
 
 	details := deal.Details

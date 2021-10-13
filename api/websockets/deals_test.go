@@ -1,61 +1,27 @@
 package websockets
 
 import (
-	"github.com/gorilla/mux"
-	"github.com/jslowik/commacloner/api"
+	"github.com/jslowik/commacloner/api/dobjs"
 	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"testing"
 
 	"github.com/jslowik/commacloner/config"
 )
 
-const (
-	StartNewDealPath  = "/ver1/bots/{id:[a-zA-Z0-9]+}/start_new_deal"
-	CancelDealPath    = "/ver1/deals/{id:[a-zA-Z0-9]+}/cancel"
-	PanicSellDealPath = "/ver1/deals/{id:[a-zA-Z0-9]+}/panic_sell"
-)
-
-// NewTest3CServer mocks the 3Commas API Server.  pass in a func to set a custom request handler
-func NewTest3CServer(customPath string, customFunc func(w http.ResponseWriter, r *http.Request)) (*httptest.Server, error) {
-	rtr := mux.NewRouter()
-
-	dealFunc := func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusCreated)
-	}
-
-	if customFunc != nil {
-		dealFunc = customFunc
-	}
-
-	if customPath != StartNewDealPath {
-		rtr.HandleFunc(StartNewDealPath, dealFunc)
-	}
-
-	if customPath != CancelDealPath {
-		rtr.HandleFunc(CancelDealPath, dealFunc)
-	}
-
-	if customFunc != nil {
-		rtr.HandleFunc(customPath, customFunc)
-	}
-	return httptest.NewServer(rtr), nil
-}
-
 func TestDealsStream_Build(t *testing.T) {
 	tests := []struct {
 		name      string
 		APIKey    string
 		APISecret string
-		want      *Message
+		want      *IdentifierMessage
 		wantErr   bool
 	}{
 		{
 			name:      "clean path",
 			APIKey:    "myapikey",
 			APISecret: "s0m3s3cr3t!!",
-			want: &Message{
+			want: &IdentifierMessage{
 				Identifier: "{\"channel\":\"DealsChannel\",\"users\":[{\"api_key\":\"myapikey\",\"signature\":\"0a77586521ce9d268f87e6d3bcf5a3c0995481c37dce4502914d07f61562f57f\"}]}",
 				Command:    "subscribe",
 			},
@@ -158,15 +124,15 @@ func TestDealsStream_HandleDeal(t *testing.T) {
 		name    string
 		config  config.API
 		botMaps map[int][]config.BotMapping
-		deal    api.DealsMessage
+		deal    DealsMessage
 		handler customHandlerFields
 		wantErr bool
 	}{
 		{
 			name:    "safety trade should ignore",
 			botMaps: nil,
-			deal: api.DealsMessage{
-				Details: api.DealDetails{
+			deal: DealsMessage{
+				Details: dobjs.Deal{
 					Status:                     "bought",
 					CompletedSafetyOrdersCount: 1,
 				},
@@ -177,8 +143,8 @@ func TestDealsStream_HandleDeal(t *testing.T) {
 			name:    "no defined bots",
 			config:  config.API{},
 			botMaps: nil,
-			deal: api.DealsMessage{
-				Details: api.DealDetails{
+			deal: DealsMessage{
+				Details: dobjs.Deal{
 					Status: "bought",
 				},
 			},
@@ -198,8 +164,8 @@ func TestDealsStream_HandleDeal(t *testing.T) {
 					},
 				}},
 			},
-			deal: api.DealsMessage{
-				Details: api.DealDetails{
+			deal: DealsMessage{
+				Details: dobjs.Deal{
 					BotID:                      1234,
 					Status:                     "bought",
 					CompletedSafetyOrdersCount: 0,
@@ -224,8 +190,8 @@ func TestDealsStream_HandleDeal(t *testing.T) {
 					},
 				}},
 			},
-			deal: api.DealsMessage{
-				Details: api.DealDetails{
+			deal: DealsMessage{
+				Details: dobjs.Deal{
 					BotID:                      1234,
 					Status:                     "bought",
 					CompletedSafetyOrdersCount: 0,
@@ -238,13 +204,12 @@ func TestDealsStream_HandleDeal(t *testing.T) {
 					w.WriteHeader(http.StatusUnprocessableEntity)
 				},
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			//logger := zap.NewExample()
-			test3CServer, _ := NewTest3CServer(tt.handler.handlerPath, tt.handler.handler)
+			test3CServer, _ := newTest3CServer(tt.handler.handlerPath, tt.handler.handler)
 
 			d := DealsStream{
 				APIConfig: tt.config,

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jslowik/commacloner/api"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -87,15 +86,7 @@ func serve(args []string) error {
 		return err
 	}
 
-	//test, err := rest.GetBot(c.API, 99999)
-	//if err != nil {
-	//	logger.Fatalf("err: %v", err)
-	//	return err
-	//} else  {
-	//	logger.Infof("got bot: %v", test)
-	//}
-
-	messageOut := make(chan *websockets.Message)
+	messageOut := make(chan *websockets.IdentifierMessage)
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
@@ -110,7 +101,7 @@ func serve(args []string) error {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		pong := websockets.Message{Type: "pong"}
+		pong := websockets.IdentifierMessage{Type: "pong"}
 
 		for {
 			msgType, message, readErr := conn.ReadMessage()
@@ -128,8 +119,8 @@ func serve(args []string) error {
 			}
 			logger.Debugf("recv: type - %d message - %s", msgType, message)
 
-			ctrlMessage := api.Message{}
-			pingMessage := api.PingMessage{}
+			ctrlMessage := websockets.Message{}
+			pingMessage := websockets.PingMessage{}
 			if unmarshalError := json.Unmarshal(message, &ctrlMessage); unmarshalError == nil {
 				switch ctrlMessage.Type {
 				case "welcome":
@@ -139,7 +130,7 @@ func serve(args []string) error {
 					logger.Infof("subscription confirmed : %s", message)
 				case "Deal", "Deal::ShortDeal":
 					logger.Debugf("received deal %v", ctrlMessage.Message)
-					dealMessage := api.DealsMessage{}
+					dealMessage := websockets.DealsMessage{}
 					var dealErr error
 					if dealErr = json.Unmarshal(message, &dealMessage); dealErr == nil {
 						dealErr = stream.HandleDeal(dealMessage)
@@ -163,7 +154,7 @@ func serve(args []string) error {
 		case <-done:
 			return nil
 		case m := <-messageOut:
-			logger.Debugf("Send Message %s", m)
+			logger.Debugf("Send IdentifierMessage %s", m)
 			err := conn.WriteJSON(m)
 			if err != nil {
 				logger.Errorf("write message out failure: %v", err)

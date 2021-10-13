@@ -35,7 +35,9 @@ type API struct {
 	RestURL      string `json:"rest_url"`
 }
 
+// LunarCrushAPI contains configuration elements for the LunarCrush API
 type LunarCrushAPI struct {
+	Enabled bool   `json:"enabled"`
 	Key     string `json:"key"`
 	RestURL string `json:"rest_url"`
 }
@@ -157,8 +159,8 @@ func (c LunarCrushAPI) validate() []string {
 		bad    bool
 		errMsg string
 	}{
-		{c.Key == "", "no api key specified in config file"},
-		{c.RestURL == "", "no rest url defined"},
+		{c.Enabled && c.Key == "", "no api key specified in config file"},
+		{c.Enabled && c.RestURL == "", "no rest url defined"},
 	}
 
 	var checkErrors []string

@@ -1,6 +1,8 @@
-package api
+package websockets
 
-import "testing"
+import (
+	"testing"
+)
 
 const DealPayload string = "{\"identifier\":\"{\\\"channel\\\":\\\"DealsChannel\\\",\\\"users\\\":[{\\\"api_key\\\":\\\"34ee791264c34a2e9a16050674328065c48e8cea02384de68ee5ca9452f4cd73\\\",\\\"signature\\\":\\\"e0ece8a0090097bfbac6e2bc9625638dfd7dc9e99850cc92f4209ebc11de897d\\\"}]}\",\"message\":{\"id\":889690387,\"type\":\"Deal\",\"bot_id\":6093127,\"completed_safety_orders_count\":0,\"completed_manual_safety_orders_count\":0,\"pair\":\"USDT_BTC\",\"status\":\"base_order_placed\"}}"
 

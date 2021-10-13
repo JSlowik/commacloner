@@ -1,12 +1,9 @@
 package rest
 
 import (
-	"fmt"
-	"github.com/jslowik/commacloner/api"
+	"encoding/json"
+	"github.com/jslowik/commacloner/api/dobjs"
 	"github.com/jslowik/commacloner/config"
-	"github.com/jslowik/commacloner/log"
-	"io/ioutil"
-	"net/http"
 )
 
 const (
@@ -18,61 +15,29 @@ const (
 	GetExchanges   = "/ver1/accounts"
 )
 
-//func generateQuery(path string, queryParameters map[string]string) *url.URL {
-//	u, _ := url.Parse(path)
-//	q, _ := url.ParseQuery(u.RawQuery)
-//
-//	for key, element := range queryParameters {
-//		q.Add(key, element)
-//	}
-//	u.RawQuery = q.Encode()
-//
-//	return u
-//}
-
-func GetExchangeAccounts(apiConfig config.API) error {
-	logger := log.NewLogger("GetExchanges")
+//GetExchangeAccounts gets the exchanges associated with an API key
+func GetExchangeAccounts(apiConfig config.API) ([]dobjs.Exchange, error) {
 	route := GetExchanges
 
 	path := apiConfig.RestURL + route
 
 	query := generateQuery(path, nil)
 
-	// Generate Signature
-	sig := api.ComputeSignature(fmt.Sprintf("%s?%s", query.Path, query.RawQuery), apiConfig.Secret)
-
-	req, err := http.NewRequest("GET", query.String(), nil)
+	resp, err := makeRequest("GET", query, apiConfig)
 	if err != nil {
-		return fmt.Errorf("could not get user accounts: %v", err)
+		return nil, err
 	}
 
-	req.Header.Set("APIKEY", apiConfig.Key)
-	req.Header.Set("Signature", sig)
-
-	resp, err := http.DefaultClient.Do(req)
+	var accounts []dobjs.Exchange
+	err = json.Unmarshal(resp, &accounts)
 	if err != nil {
-		return fmt.Errorf("could not send new deal request: %v", err)
+		return nil, err
 	}
-	defer resp.Body.Close()
-
-	responseBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		break
-	case http.StatusUnprocessableEntity:
-		logger.Warnf("cannot cancel deal: %s", string(responseBody))
-	default:
-		return fmt.Errorf("bad status %d - %s", resp.StatusCode, string(responseBody))
-	}
-	return nil
+	return accounts, nil
 }
 
-func GetExchangePairs(apiConfig config.API, marketCode string) error {
-	logger := log.NewLogger("GetExchangePairs")
+//GetExchangePairs gets the pairs that are allowed on a given exchange
+func GetExchangePairs(apiConfig config.API, marketCode string) ([]string, error) {
 	route := GetMarketPairs
 
 	path := apiConfig.RestURL + route
@@ -81,36 +46,16 @@ func GetExchangePairs(apiConfig config.API, marketCode string) error {
 	params[marketCodeParameter] = marketCode
 
 	query := generateQuery(path, params)
-
-	// Generate Signature
-	sig := api.ComputeSignature(fmt.Sprintf("%s?%s", query.Path, query.RawQuery), apiConfig.Secret)
-
-	req, err := http.NewRequest("GET", query.String(), nil)
+	resp, err := makeRequest("GET", query, apiConfig)
 	if err != nil {
-		return fmt.Errorf("could not get user accounts: %v", err)
+		return nil, err
 	}
 
-	req.Header.Set("APIKEY", apiConfig.Key)
-	req.Header.Set("Signature", sig)
-
-	resp, err := http.DefaultClient.Do(req)
+	var pairs []string
+	err = json.Unmarshal(resp, &pairs)
 	if err != nil {
-		return fmt.Errorf("could not send new deal request: %v", err)
+		return nil, err
 	}
-	defer resp.Body.Close()
+	return pairs, nil
 
-	responseBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		break
-	case http.StatusUnprocessableEntity:
-		logger.Warnf("cannot cancel deal: %s", string(responseBody))
-	default:
-		return fmt.Errorf("bad status %d - %s", resp.StatusCode, string(responseBody))
-	}
-	return nil
 }

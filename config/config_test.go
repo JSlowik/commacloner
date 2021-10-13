@@ -19,6 +19,11 @@ func TestConfig_Validate(t *testing.T) {
 			WebsocketURL: "wss://ws.3commas.io/websocket",
 			RestURL:      "https://api.3commas.io/public/api",
 		},
+		LunarcrushAPI: LunarCrushAPI{
+			Enabled: true,
+			Key:     "qwerty",
+			RestURL: "https://api.lunarcrush.com/v2",
+		},
 		Bots: []BotMapping{
 			{
 				ID: "longbot",
@@ -195,6 +200,34 @@ func TestConfig_Validate(t *testing.T) {
 				},
 				API:  baselineConfig.API,
 				Bots: baselineConfig.Bots,
+			},
+			wantErr: true,
+		},
+		{
+			name: "lunarcrush enabled but no api key",
+			config: Config{
+				Logging: baselineConfig.Logging,
+				API:     baselineConfig.API,
+				Bots:    baselineConfig.Bots,
+				LunarcrushAPI: LunarCrushAPI{
+					Enabled: true,
+					Key:     "",
+					RestURL: baselineConfig.LunarcrushAPI.RestURL,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "lunarcrush enabled but no url",
+			config: Config{
+				Logging: baselineConfig.Logging,
+				API:     baselineConfig.API,
+				Bots:    baselineConfig.Bots,
+				LunarcrushAPI: LunarCrushAPI{
+					Enabled: true,
+					Key:     baselineConfig.LunarcrushAPI.Key,
+					RestURL: "",
+				},
 			},
 			wantErr: true,
 		},
