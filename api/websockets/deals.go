@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/jslowik/commacloner/api"
 	"github.com/jslowik/commacloner/api/rest"
+	"github.com/jslowik/commacloner/api/websockets/dobjs"
 	"github.com/jslowik/commacloner/config"
 	"github.com/jslowik/commacloner/log"
 )
@@ -24,11 +25,11 @@ func (d DealsStream) BuildSignature(endpoint string) string {
 }
 
 // buildIdentifier builds the stream identifier
-func (d DealsStream) buildIdentifier() Identifier {
+func (d DealsStream) buildIdentifier() dobjs.Identifier {
 	signature := d.BuildSignature(dealsEndpoint)
-	return Identifier{
+	return dobjs.Identifier{
 		Channel: "DealsChannel",
-		Users: []User{
+		Users: []dobjs.User{
 			{
 				APIKey:    d.APIConfig.Key,
 				Signature: signature,
@@ -38,21 +39,21 @@ func (d DealsStream) buildIdentifier() Identifier {
 }
 
 // Build constructs the deals websocket subscription
-func (d DealsStream) Build() (*Message, error) {
+func (d DealsStream) Build() (*dobjs.IdentifierMessage, error) {
 	identifier := d.buildIdentifier()
 	identifierStr, err := json.Marshal(identifier)
 	if err != nil {
 		return nil, fmt.Errorf("could not marshall identifier: %v", err)
 	}
 
-	return &Message{
+	return &dobjs.IdentifierMessage{
 		Identifier: string(identifierStr),
 		Command:    "subscribe",
 	}, nil
 }
 
 // HandleDeal reads messages from the websocket connection and handles the deal
-func (d DealsStream) HandleDeal(deal api.DealsMessage) error {
+func (d DealsStream) HandleDeal(deal dobjs.DealsMessage) error {
 	logger := log.NewLogger("deals")
 
 	details := deal.Details

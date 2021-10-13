@@ -1,8 +1,9 @@
-package api
+package dobjs
 
 import (
 	"encoding/json"
 	"errors"
+	"github.com/jslowik/commacloner/api/dobjs"
 )
 
 type Message struct {
@@ -31,7 +32,7 @@ func (d *Message) UnmarshalJSON(data []byte) error {
 	jsonString, _ := json.Marshal(details)
 
 	// Determine if a deal
-	s := DealDetails{}
+	s := dobjs.Deal{}
 	if e := json.Unmarshal(jsonString, &s); e == nil && s.Type != "" {
 		d.Type = s.Type
 	}
@@ -44,17 +45,7 @@ func (d *Message) UnmarshalJSON(data []byte) error {
 
 type DealsMessage struct {
 	Message
-	Details DealDetails `json:"message"`
-}
-
-type DealDetails struct {
-	ID                               int    `json:"id"`
-	Type                             string `json:"type"`
-	BotID                            int    `json:"bot_id"`
-	CompletedSafetyOrdersCount       int    `json:"completed_safety_orders_count"`
-	CompletedManualSafetyOrdersCount int    `json:"completed_manual_safety_orders_count"`
-	Pair                             string `json:"pair"`
-	Status                           string `json:"status"`
+	Details dobjs.Deal `json:"message"`
 }
 
 type PingMessage struct {
@@ -100,7 +91,7 @@ func (d *DealsMessage) UnmarshalJSON(data []byte) error {
 	jsonString, _ := json.Marshal(details)
 
 	// convert json to struct
-	s := DealDetails{}
+	s := dobjs.Deal{}
 	if e := json.Unmarshal(jsonString, &s); e != nil {
 		return e
 	}
