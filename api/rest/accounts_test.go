@@ -29,7 +29,7 @@ func TestGetExchangeAccounts(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
+		name    string
 		handler customHandlerFields
 		wantErr bool
 	}{
@@ -46,6 +46,29 @@ func TestGetExchangeAccounts(t *testing.T) {
 					}
 				},
 			},
+			wantErr: false,
+		},
+		{
+			name: "Unauthorized User",
+			handler: customHandlerFields{
+				handlerPath: GetExchanges,
+				handler: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusUnauthorized)
+					msg := struct {
+						Error       string `json:"error"`
+						Description string `json:"error_description"`
+					}{
+						Error:       "api_key_invalid_or_expired",
+						Description: "Unauthorized. Invalid or expired api key.",
+					}
+					data, _ := json.Marshal(msg)
+					_, e := w.Write(data)
+					if e != nil {
+						t.Fatalf("could not marshal test data: %v", e)
+					}
+				},
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -98,6 +121,30 @@ func TestGetExchangePairs(t *testing.T) {
 					}
 				},
 			},
+			wantErr:    false,
+			marketCode: "gdax",
+		},
+		{
+			name: "Unauthorized User",
+			handler: customHandlerFields{
+				handlerPath: GetMarketPairs,
+				handler: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusUnauthorized)
+					msg := struct {
+						Error       string `json:"error"`
+						Description string `json:"error_description"`
+					}{
+						Error:       "api_key_invalid_or_expired",
+						Description: "Unauthorized. Invalid or expired api key.",
+					}
+					data, _ := json.Marshal(msg)
+					_, e := w.Write(data)
+					if e != nil {
+						t.Fatalf("could not marshal test data: %v", e)
+					}
+				},
+			},
+			wantErr:    true,
 			marketCode: "gdax",
 		},
 	}
