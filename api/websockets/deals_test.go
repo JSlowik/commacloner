@@ -2,7 +2,7 @@ package websockets
 
 import (
 	"github.com/jslowik/commacloner/api/dobjs"
-	dobjs2 "github.com/jslowik/commacloner/api/websockets/dobjs"
+	websockets "github.com/jslowik/commacloner/api/websockets/dobjs"
 	"net/http"
 	"reflect"
 	"testing"
@@ -15,14 +15,14 @@ func TestDealsStream_Build(t *testing.T) {
 		name      string
 		APIKey    string
 		APISecret string
-		want      *dobjs2.IdentifierMessage
+		want      *websockets.IdentifierMessage
 		wantErr   bool
 	}{
 		{
 			name:      "clean path",
 			APIKey:    "myapikey",
 			APISecret: "s0m3s3cr3t!!",
-			want: &dobjs2.IdentifierMessage{
+			want: &websockets.IdentifierMessage{
 				Identifier: "{\"channel\":\"DealsChannel\",\"users\":[{\"api_key\":\"myapikey\",\"signature\":\"0a77586521ce9d268f87e6d3bcf5a3c0995481c37dce4502914d07f61562f57f\"}]}",
 				Command:    "subscribe",
 			},
@@ -83,15 +83,15 @@ func TestDealsStream_buildIdentifier(t *testing.T) {
 		name      string
 		APIKey    string
 		APISecret string
-		want      dobjs2.Identifier
+		want      websockets.Identifier
 	}{
 		{
 			name:      "clean path",
 			APIKey:    "myapikey",
 			APISecret: "s0m3s3cr3t!!",
-			want: dobjs2.Identifier{
+			want: websockets.Identifier{
 				Channel: "DealsChannel",
-				Users: []dobjs2.User{
+				Users: []websockets.User{
 					{
 						APIKey:    "myapikey",
 						Signature: "0a77586521ce9d268f87e6d3bcf5a3c0995481c37dce4502914d07f61562f57f",
@@ -125,14 +125,14 @@ func TestDealsStream_HandleDeal(t *testing.T) {
 		name    string
 		config  config.API
 		botMaps map[int][]config.BotMapping
-		deal    dobjs2.DealsMessage
+		deal    websockets.DealsMessage
 		handler customHandlerFields
 		wantErr bool
 	}{
 		{
 			name:    "safety trade should ignore",
 			botMaps: nil,
-			deal: dobjs2.DealsMessage{
+			deal: websockets.DealsMessage{
 				Details: dobjs.Deal{
 					Status:                     "bought",
 					CompletedSafetyOrdersCount: 1,
@@ -144,7 +144,7 @@ func TestDealsStream_HandleDeal(t *testing.T) {
 			name:    "no defined bots",
 			config:  config.API{},
 			botMaps: nil,
-			deal: dobjs2.DealsMessage{
+			deal: websockets.DealsMessage{
 				Details: dobjs.Deal{
 					Status: "bought",
 				},
@@ -165,7 +165,7 @@ func TestDealsStream_HandleDeal(t *testing.T) {
 					},
 				}},
 			},
-			deal: dobjs2.DealsMessage{
+			deal: websockets.DealsMessage{
 				Details: dobjs.Deal{
 					BotID:                      1234,
 					Status:                     "bought",
@@ -191,7 +191,7 @@ func TestDealsStream_HandleDeal(t *testing.T) {
 					},
 				}},
 			},
-			deal: dobjs2.DealsMessage{
+			deal: websockets.DealsMessage{
 				Details: dobjs.Deal{
 					BotID:                      1234,
 					Status:                     "bought",
