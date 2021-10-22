@@ -3,7 +3,7 @@ package dobjs
 import (
 	"encoding/json"
 	"errors"
-	"github.com/jslowik/commacloner/api/dobjs"
+	"github.com/jslowik/commacloner/api/threecommas/dobjs"
 )
 
 type Message struct {

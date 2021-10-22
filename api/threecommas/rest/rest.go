@@ -2,7 +2,7 @@ package rest
 
 import (
 	"fmt"
-	"github.com/jslowik/commacloner/api"
+	"github.com/jslowik/commacloner/api/threecommas"
 	"github.com/jslowik/commacloner/config"
 	"io/ioutil"
 	"net/http"
@@ -25,7 +25,7 @@ func generateQuery(path string, queryParameters map[string]string) *url.URL {
 //makeRequest makes and signs an http request, and returns the response
 func makeRequest(method string, query *url.URL, apiConfig config.API) ([]byte, error) {
 	// Generate Signature
-	sig := api.ComputeSignature(fmt.Sprintf("%s?%s", query.Path, query.RawQuery), apiConfig.Secret)
+	sig := threecommas.ComputeSignature(fmt.Sprintf("%s?%s", query.Path, query.RawQuery), apiConfig.Secret)
 
 	req, err := http.NewRequest(method, query.String(), nil)
 	if err != nil {

@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jslowik/commacloner/api"
-	"github.com/jslowik/commacloner/api/rest"
-	"github.com/jslowik/commacloner/api/websockets/dobjs"
+	"github.com/jslowik/commacloner/api/threecommas"
+	"github.com/jslowik/commacloner/api/threecommas/rest"
+	dobjs2 "github.com/jslowik/commacloner/api/threecommas/websockets/dobjs"
 	"github.com/jslowik/commacloner/config"
 	"github.com/jslowik/commacloner/log"
 )
@@ -21,15 +21,15 @@ type DealsStream struct {
 
 // BuildSignature computes the signature for the websocket subscription message
 func (d DealsStream) BuildSignature(endpoint string) string {
-	return api.ComputeSignature(endpoint, d.APIConfig.Secret)
+	return threecommas.ComputeSignature(endpoint, d.APIConfig.Secret)
 }
 
 // buildIdentifier builds the stream identifier
-func (d DealsStream) buildIdentifier() dobjs.Identifier {
+func (d DealsStream) buildIdentifier() dobjs2.Identifier {
 	signature := d.BuildSignature(dealsEndpoint)
-	return dobjs.Identifier{
+	return dobjs2.Identifier{
 		Channel: "DealsChannel",
-		Users: []dobjs.User{
+		Users: []dobjs2.User{
 			{
 				APIKey:    d.APIConfig.Key,
 				Signature: signature,
@@ -39,21 +39,21 @@ func (d DealsStream) buildIdentifier() dobjs.Identifier {
 }
 
 // Build constructs the deals websocket subscription
-func (d DealsStream) Build() (*dobjs.IdentifierMessage, error) {
+func (d DealsStream) Build() (*dobjs2.IdentifierMessage, error) {
 	identifier := d.buildIdentifier()
 	identifierStr, err := json.Marshal(identifier)
 	if err != nil {
 		return nil, fmt.Errorf("could not marshall identifier: %v", err)
 	}
 
-	return &dobjs.IdentifierMessage{
+	return &dobjs2.IdentifierMessage{
 		Identifier: string(identifierStr),
 		Command:    "subscribe",
 	}, nil
 }
 
 // HandleDeal reads messages from the websocket connection and handles the deal
-func (d DealsStream) HandleDeal(deal dobjs.DealsMessage) error {
+func (d DealsStream) HandleDeal(deal dobjs2.DealsMessage) error {
 	logger := log.NewLogger("deals")
 
 	details := deal.Details

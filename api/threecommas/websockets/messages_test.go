@@ -1,7 +1,7 @@
 package websockets
 
 import (
-	"github.com/jslowik/commacloner/api/websockets/dobjs"
+	"github.com/jslowik/commacloner/api/threecommas/websockets/dobjs"
 	"testing"
 )
 
