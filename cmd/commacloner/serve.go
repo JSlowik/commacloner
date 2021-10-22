@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jslowik/commacloner/api/threecommas/websockets"
-	dobjs2 "github.com/jslowik/commacloner/api/threecommas/websockets/dobjs"
+	wsapi "github.com/jslowik/commacloner/api/threecommas/websockets/dobjs"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -87,7 +87,7 @@ func serve(args []string) error {
 		return err
 	}
 
-	messageOut := make(chan *dobjs2.IdentifierMessage)
+	messageOut := make(chan *wsapi.IdentifierMessage)
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
@@ -102,7 +102,7 @@ func serve(args []string) error {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		pong := dobjs2.IdentifierMessage{Type: "pong"}
+		pong := wsapi.IdentifierMessage{Type: "pong"}
 
 		for {
 			msgType, message, readErr := conn.ReadMessage()
@@ -120,8 +120,8 @@ func serve(args []string) error {
 			}
 			logger.Debugf("recv: type - %d message - %s", msgType, message)
 
-			ctrlMessage := dobjs2.Message{}
-			pingMessage := dobjs2.PingMessage{}
+			ctrlMessage := wsapi.Message{}
+			pingMessage := wsapi.PingMessage{}
 			if unmarshalError := json.Unmarshal(message, &ctrlMessage); unmarshalError == nil {
 				switch ctrlMessage.Type {
 				case "welcome":
@@ -131,7 +131,7 @@ func serve(args []string) error {
 					logger.Infof("subscription confirmed : %s", message)
 				case "Deal", "Deal::ShortDeal":
 					logger.Debugf("received deal %v", ctrlMessage.Message)
-					dealMessage := dobjs2.DealsMessage{}
+					dealMessage := wsapi.DealsMessage{}
 					var dealErr error
 					if dealErr = json.Unmarshal(message, &dealMessage); dealErr == nil {
 						dealErr = stream.HandleDeal(dealMessage)
