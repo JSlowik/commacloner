@@ -2,7 +2,7 @@ package rest
 
 import (
 	"encoding/json"
-	"github.com/jslowik/commacloner/api/rest/dobjs"
+	"github.com/jslowik/commacloner/api/threecommas/rest/dobjs"
 	"github.com/jslowik/commacloner/config"
 )
 
