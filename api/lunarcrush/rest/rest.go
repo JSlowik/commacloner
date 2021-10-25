@@ -1,14 +1,34 @@
 package rest
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
-	"github.com/jslowik/commacloner/api/threecommas"
-	"github.com/jslowik/commacloner/config"
+	"github.com/jslowik/commacloner/api/lunarcrush/rest/dobjs"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 )
+
+//GetPairs Gets all market pairs from LunarCrush's api
+func GetPairs(apiKey string) ([]dobjs.PairData, error) {
+	route := fmt.Sprintf("/v2?data=market&key=%s&type=fast", apiKey)
+
+	path := "https://api.lunarcrush.com" + route
+
+	q := generateQuery(path, nil)
+	res, e := makeRequest("GET", q)
+	if e != nil {
+		return nil, e
+	}
+
+	var respData dobjs.Response
+	e = json.Unmarshal(res, &respData)
+	if e != nil {
+		return nil, e
+	}
+	return respData.Data, nil
+
+}
 
 //generateQuery generates a query with the given map of query parameters
 func generateQuery(path string, queryParameters map[string]string) *url.URL {
@@ -24,31 +44,10 @@ func generateQuery(path string, queryParameters map[string]string) *url.URL {
 }
 
 //makeRequest makes and signs an http request, and returns the response
-func makeRequest(method string, query *url.URL, apiConfig config.API, data url.Values, additionalHeaders map[string]string) ([]byte, error) {
-
-	valString := data.Encode()
-
-	q := query.RawQuery
-
-	if q == "" {
-		q = valString
-	} else if valString != "" {
-		q = q + "&" + valString
-	}
-
-	// Generate Signature
-	sig := threecommas.ComputeSignature(fmt.Sprintf("%s?%s", query.Path, q), apiConfig.Secret)
-
-	req, err := http.NewRequest(method, query.String(), bytes.NewBufferString(valString))
+func makeRequest(method string, query *url.URL) ([]byte, error) {
+	req, err := http.NewRequest(method, query.String(), nil)
 	if err != nil {
 		return nil, err
-	}
-
-	req.Header.Set("APIKEY", apiConfig.Key)
-	req.Header.Set("Signature", sig)
-
-	for key, value := range additionalHeaders {
-		req.Header.Set(key, value)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -66,8 +65,6 @@ func makeRequest(method string, query *url.URL, apiConfig config.API, data url.V
 	switch resp.StatusCode {
 	case http.StatusCreated, http.StatusOK:
 		e = nil
-	case http.StatusUnprocessableEntity:
-		e = fmt.Errorf("%d - Unprocessable Entity - %v ", resp.StatusCode, string(responseBody))
 	default:
 		e = fmt.Errorf("%d - Unexpected Response Code - %v", resp.StatusCode, string(responseBody))
 	}
