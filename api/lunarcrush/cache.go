@@ -10,21 +10,24 @@ import (
 	"time"
 )
 
+//LunarCache contains logic necessary to cache lunarcrush data.
 type LunarCache struct {
 	Logger *zap.SugaredLogger
 	Config config.LunarCrushAPI
 
-	mu            sync.Mutex
-	pairs [] dobjs.PairData
+	mu        sync.Mutex
+	pairs     []dobjs.PairData
 	Blacklist map[string]bool
 }
 
-func (cache *LunarCache) UpdateCache(){
+//UpdateCache Updates the cache with the latest data.  Note, if the endpoint is unavailable, the cache will block for
+//5 seconds and try again
+func (cache *LunarCache) UpdateCache() {
 	cache.mu.Lock()
 	defer cache.mu.Unlock()
 
 	for {
-		p, err  := rest.GetPairs(cache.Config.Key,"")
+		p, err := rest.GetPairs(cache.Config.Key)
 		if err == nil {
 			cache.pairs = p
 			break
@@ -35,27 +38,31 @@ func (cache *LunarCache) UpdateCache(){
 	}
 }
 
-func (cache *LunarCache)GetByGalaxyScore(validPairs map[string][]string, max int) []string {
-	return cache.getMatchingPairs(sortByGalaxyScore,validPairs,max)
+//GetByGalaxyScore Will return max pairs as sorted by GalaxyScore.  All pairs returned must exist in the "validPairs"
+//list
+func (cache *LunarCache) GetByGalaxyScore(validPairs map[string][]string, max int) []string {
+	return cache.getMatchingPairs(sortByGalaxyScore, validPairs, max)
 }
 
-func (cache *LunarCache)GetByAltRank(validPairs map[string][]string, max int) []string {
-	return cache.getMatchingPairs(sortByAltRank,validPairs,max)
+//GetByAltRank Will return max pairs as sorted by GalaxyScore.  All pairs returned must exist in the "validPairs"
+////list
+func (cache *LunarCache) GetByAltRank(validPairs map[string][]string, max int) []string {
+	return cache.getMatchingPairs(sortByAltRank, validPairs, max)
 }
 
-type sorter func([] dobjs.PairData) [] dobjs.PairData
+type sorter func([]dobjs.PairData) []dobjs.PairData
 
-func (cache *LunarCache)getMatchingPairs (sortFunc sorter, validPairs map[string][]string, max int) []string {
+func (cache *LunarCache) getMatchingPairs(sortFunc sorter, validPairs map[string][]string, max int) []string {
 	cache.mu.Lock()
 	defer cache.mu.Unlock()
 
 	sorted := sortFunc(cache.pairs)
 
-	pairs := make([]string,0)
+	pairs := make([]string, 0)
 	for _, pair := range sorted {
 		if validPairs[pair.S] != nil {
 			if !cache.Blacklist[pair.S] {
-				pairs = append(pairs,pair.S)
+				pairs = append(pairs, pair.S)
 			} else {
 				cache.Logger.Infof("Pair %s in CommaCloner blacklist, ignoring", pair.S)
 			}
@@ -67,18 +74,14 @@ func (cache *LunarCache)getMatchingPairs (sortFunc sorter, validPairs map[string
 	return pairs
 }
 
-
-
-func sortByAltRank(pairs [] dobjs.PairData) [] dobjs.PairData {
+func sortByAltRank(pairs []dobjs.PairData) []dobjs.PairData {
 	sort.Slice(pairs, func(i, j int) bool {
 		return pairs[i].Acr < pairs[j].Acr
 	})
 	return pairs
 }
 
-
-
-func sortByGalaxyScore(pairs [] dobjs.PairData) [] dobjs.PairData {
+func sortByGalaxyScore(pairs []dobjs.PairData) []dobjs.PairData {
 	sort.Slice(pairs, func(i, j int) bool {
 		return pairs[i].Gs > pairs[j].Gs
 	})

@@ -9,46 +9,14 @@ import (
 	"net/url"
 )
 
-//func sortByAltRank(pairs [] dobjs.PairData) [] dobjs.PairData {
-//	sort.Slice(pairs, func(i, j int) bool {
-//		return pairs[i].Acr < pairs[j].Acr
-//	})
-//	return pairs
-//}
-//
-//func sortByGalaxyScore(pairs [] dobjs.PairData) [] dobjs.PairData {
-//	sort.Slice(pairs, func(i, j int) bool {
-//		return pairs[i].Gs > pairs[j].Gs
-//	})
-//	return pairs
-//}
-
-//func GetNPairs(apiKey string, sort string, validPairs map[string][]string, max int) ([]string, error) {
-//	allPairs, err := GetPairs(apiKey,sort)
-//	if err != nil {
-//		return nil, err
-//	}
-//	sorted := sortByGalaxyScore(allPairs)
-//
-//	pairs := make([]string,0)
-//	for _, pair := range sorted {
-//		if validPairs[pair.S] != nil {
-//			pairs = append(pairs,pair.S)
-//		}
-//		if len(pairs) == max {
-//			break
-//		}
-//	}
-//	return pairs, nil
-//}
-
-func GetPairs(apiKey string, sort string)([]dobjs.PairData, error) {
-	route := "/v2?data=market&key=ytoqgk0erazk0wkjfzr3h&type=fast"
+//GetPairs Gets all market pairs from LunarCrush's api
+func GetPairs(apiKey string) ([]dobjs.PairData, error) {
+	route := fmt.Sprintf("/v2?data=market&key=%s&type=fast", apiKey)
 
 	path := "https://api.lunarcrush.com" + route
 
-	q := generateQuery(path,nil)
-	res, e := makeRequest("GET",q)
+	q := generateQuery(path, nil)
+	res, e := makeRequest("GET", q)
 	if e != nil {
 		return nil, e
 	}
@@ -97,8 +65,6 @@ func makeRequest(method string, query *url.URL) ([]byte, error) {
 	switch resp.StatusCode {
 	case http.StatusCreated, http.StatusOK:
 		e = nil
-	//case http.StatusUnprocessableEntity:
-	//	e = fmt.Errorf("%d - Unprocessable Entity - %v ", resp.StatusCode, string(responseBody))
 	default:
 		e = fmt.Errorf("%d - Unexpected Response Code - %v", resp.StatusCode, string(responseBody))
 	}

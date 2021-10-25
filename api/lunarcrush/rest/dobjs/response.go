@@ -1,7 +1,6 @@
 package dobjs
 
-
-
+//Response contains the LunarCrush API response
 type Response struct {
 	Config struct {
 		Data  string `json:"data"`
@@ -13,14 +12,15 @@ type Response struct {
 		Day   int `json:"day"`
 		Month int `json:"month"`
 	} `json:"usage"`
-	Data [] PairData`json:"data"`
+	Data []PairData `json:"data"`
 }
 
-
+//PairData contains the information regarding a pair from lunarcrush.
+//TODO consider removing commented out fields if never going to use.
 type PairData struct {
-	ID         int     `json:"id"`
-	S          string  `json:"s"`
-	N          string  `json:"n"`
+	ID int    `json:"id"`
+	S  string `json:"s"`
+	N  string `json:"n"`
 	//P          float64 `json:"p"`
 	//PBtc       float64 `json:"p_btc"`
 	//V          float64 `json:"v"`
@@ -28,7 +28,7 @@ type PairData struct {
 	//Pc         float64 `json:"pc"`
 	//Pch        float64 `json:"pch"`
 	//Mc         float64   `json:"mc"`
-	Gs         float64     `json:"gs"` //GalaxyScore
+	Gs float64 `json:"gs"` //GalaxyScore
 	//Ss         int     `json:"ss"`
 	//As         float64 `json:"as"`
 	//Bl         int     `json:"bl"`
@@ -45,7 +45,7 @@ type PairData struct {
 	//Sd         float64 `json:"sd"`
 	//D          float64 `json:"d"`
 	//Cr         float64 `json:"cr,omitempty"`
-	Acr        int     `json:"acr"`  //AltRank
+	Acr int `json:"acr"` //AltRank
 	//Tc         int     `json:"tc,omitempty"`
 	//Categories string  `json:"categories"`
 	//Df         int     `json:"df,omitempty"`

@@ -23,7 +23,10 @@ func GetExchangeAccounts(apiConfig config.API) (map[int]dobjs.Exchange, error) {
 
 	query := generateQuery(path, nil)
 
-	resp, err := makeRequest("GET", query, apiConfig,nil, nil)
+	headers := make(map[string]string)
+	headers["Forced-Mode"] = "real"
+
+	resp, err := makeRequest("GET", query, apiConfig, nil, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +54,7 @@ func GetExchangePairs(apiConfig config.API, marketCode string) ([]string, error)
 	params[marketCodeParameter] = marketCode
 
 	query := generateQuery(path, params)
-	resp, err := makeRequest("GET", query, apiConfig,nil, nil)
+	resp, err := makeRequest("GET", query, apiConfig, nil, nil)
 	if err != nil {
 		return nil, err
 	}

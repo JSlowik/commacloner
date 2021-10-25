@@ -73,19 +73,21 @@ func serve(args []string) error {
 	logger := log.NewLogger("serve")
 	logger.Info("logging configured")
 
-	//Init LunarCrush if configured
-	blacklist := make(map[string] bool)
-	for _ ,v := range c.LunarcrushAPI.Blacklist {
+	//Get LunarCrush BlackList
+	blacklist := make(map[string]bool)
+	for _, v := range c.LunarcrushAPI.Blacklist {
 		blacklist[v] = true
 	}
 
+	//Initialize the LunarCache
 	lunarCache := &lunarcrush.LunarCache{
-		Logger: log.NewLogger("lunarCache"),
-		Config: c.LunarcrushAPI,
+		Logger:    log.NewLogger("lunarCache"),
+		Config:    c.LunarcrushAPI,
 		Blacklist: blacklist,
 	}
 
 	scheduler := gocron.NewScheduler(time.UTC)
+	//If lunarcrush enabled, initialize
 	if c.LunarcrushAPI.Cache.Enabled {
 		//Block for first cache load
 		logger.Infof("initializing LunarCrush cache")
@@ -96,7 +98,6 @@ func serve(args []string) error {
 		_, _ = scheduler.Every(c.LunarcrushAPI.Cache.Every).WaitForSchedule().Do(lunarCache.UpdateCache)
 	}
 
-
 	//log mappings
 	logger.Info("loading bot mappings")
 	botMap := make(map[int][]config.BotMapping)
@@ -104,13 +105,12 @@ func serve(args []string) error {
 		botMap[mapping.Source.ID] = append(botMap[mapping.Source.ID], mapping)
 		if mapping.Pairs.Mode == "lunarcrush" {
 			//Schedule an Updater for the bot
-			_, _ = scheduler.Every(mapping.Pairs.Config.Refresh).Tag(fmt.Sprintf("updatePairs_%s", mapping.ID)).Do(UpdateMapping,c.API,mapping,lunarCache)
+			_, _ = scheduler.Every(mapping.Pairs.Config.Refresh).Tag(fmt.Sprintf("updatePairs_%s", mapping.ID)).Do(UpdateMapping, c.API, mapping, lunarCache)
 		}
 	}
 
 	//Start Scheduler
 	scheduler.StartAsync()
-
 
 	//Make the subscription message
 	stream := websockets.DealsStream{
@@ -233,12 +233,13 @@ func generateConnection(existingConnection *websocket.Conn, url string, logger *
 	return conn, err
 }
 
-func UpdateMapping(apiConfig config.API,mapping config.BotMapping, cache *lunarcrush.LunarCache) error{
-	logger := log.NewLogger(fmt.Sprintf("updatePairs_%s",mapping.ID))
+//UpdateMapping updates bots inside the botmapping based on the latest lunarcache data.
+func UpdateMapping(apiConfig config.API, mapping config.BotMapping, cache *lunarcrush.LunarCache) error {
+	logger := log.NewLogger(fmt.Sprintf("updatePairs_%s", mapping.ID))
 
 	exchangeMap, err := tcApi.GetExchangeAccounts(apiConfig)
 	if err != nil {
-		logger.Errorf("cannot get exchange accounts: %v",  err)
+		logger.Errorf("cannot get exchange accounts: %v", err)
 	}
 
 	//Get the Destination Bot
@@ -255,18 +256,18 @@ func UpdateMapping(apiConfig config.API,mapping config.BotMapping, cache *lunarc
 
 	//Get the pairs of the destination exchange
 	marketCode := exchangeMap[destBot.AccountID].MarketCode
-	destPairs, err := tcApi.GetExchangePairs(apiConfig,marketCode)
+	destPairs, err := tcApi.GetExchangePairs(apiConfig, marketCode)
 	if err != nil {
 		return fmt.Errorf("could not get exchange pairs: %v", err)
 	}
 
 	pMap := make(map[string][]string)
-	for _,p := range destPairs {
+	for _, p := range destPairs {
 		pairSplit := strings.Split(p, "_")
 		if pMap[pairSplit[1]] == nil {
-			pMap[pairSplit[1]] = make([]string,0)
+			pMap[pairSplit[1]] = make([]string, 0)
 		}
-		pMap[pairSplit[1]] = append(pMap[pairSplit[1]] , pairSplit[0])
+		pMap[pairSplit[1]] = append(pMap[pairSplit[1]], pairSplit[0])
 	}
 	cat := mapping.Pairs.Config.Category
 
@@ -274,11 +275,11 @@ func UpdateMapping(apiConfig config.API,mapping config.BotMapping, cache *lunarc
 	switch cat {
 	case "galaxyscore":
 		logger.Infof("update %s by galaxy score", mapping.ID)
-		validPairs = cache.GetByGalaxyScore(pMap,mapping.Pairs.Config.MaxPairs)
+		validPairs = cache.GetByGalaxyScore(pMap, mapping.Pairs.Config.MaxPairs)
 		logger.Infof("pairs by galaxy score: %v", validPairs)
 	case "altrank":
 		logger.Infof("update %s by altrank", mapping.ID)
-		validPairs = cache.GetByAltRank(pMap,mapping.Pairs.Config.MaxPairs)
+		validPairs = cache.GetByAltRank(pMap, mapping.Pairs.Config.MaxPairs)
 		logger.Infof("pairs by altrank: %v", validPairs)
 	default:
 		logger.Errorf("invalid update pairs criteria: %s", cat)
@@ -286,13 +287,13 @@ func UpdateMapping(apiConfig config.API,mapping config.BotMapping, cache *lunarc
 
 	if len(validPairs) > 0 {
 		//Update Source bot
-		err := tcApi.UpdatePairs(apiConfig,sourceBot, mapping.Pairs.Config.QuoteCurrency.Source,validPairs)
+		err := tcApi.UpdatePairs(apiConfig, sourceBot, mapping.Pairs.Config.QuoteCurrency.Source, validPairs)
 		if err != nil {
 			logger.Errorf("could not update source bot %d: %v", mapping.Source.ID, err)
 		}
 
 		//Update Destination Bot
-		err = tcApi.UpdatePairs(apiConfig,destBot, mapping.Pairs.Config.QuoteCurrency.Dest,validPairs)
+		err = tcApi.UpdatePairs(apiConfig, destBot, mapping.Pairs.Config.QuoteCurrency.Dest, validPairs)
 		if err != nil {
 			logger.Errorf("could not update source bot %d: %v", mapping.Source.ID, err)
 		}

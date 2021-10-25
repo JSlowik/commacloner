@@ -33,12 +33,11 @@ func makeRequest(method string, query *url.URL, apiConfig config.API, data url.V
 	if q == "" {
 		q = valString
 	} else if valString != "" {
-			q = q + "&" + valString
+		q = q + "&" + valString
 	}
 
 	// Generate Signature
 	sig := threecommas.ComputeSignature(fmt.Sprintf("%s?%s", query.Path, q), apiConfig.Secret)
-
 
 	req, err := http.NewRequest(method, query.String(), bytes.NewBufferString(valString))
 	if err != nil {
@@ -48,8 +47,8 @@ func makeRequest(method string, query *url.URL, apiConfig config.API, data url.V
 	req.Header.Set("APIKEY", apiConfig.Key)
 	req.Header.Set("Signature", sig)
 
-	for key,value := range additionalHeaders {
-		req.Header.Set(key,value)
+	for key, value := range additionalHeaders {
+		req.Header.Set(key, value)
 	}
 
 	resp, err := http.DefaultClient.Do(req)

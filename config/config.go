@@ -38,27 +38,28 @@ type API struct {
 
 // LunarCrushAPI contains configuration elements for the LunarCrush API
 type LunarCrushAPI struct {
-	Enabled bool   `json:"enabled"`
-	Key     string `json:"key"`
-	RestURL string `json:"rest_url"`
-	Blacklist []string `json:"blacklist"`
-	Cache LunarCache `json:"cache"`
+	Enabled   bool       `json:"enabled"`
+	Key       string     `json:"key"`
+	RestURL   string     `json:"rest_url"`
+	Blacklist []string   `json:"blacklist"`
+	Cache     LunarCache `json:"cache"`
 }
 
+// LunarCache contains caching configurations
 type LunarCache struct {
-	Enabled bool `json:"enabled"`
-	Every string `json:"every"`
+	Enabled bool   `json:"enabled"`
+	Every   string `json:"every"`
 }
 
 // BotMapping contains both a source bot id to look for deals from the websockets api, and a destination bot to generate
 // a matching deal for.  Additional overrides are allowed for conversion between stablecoins/currencies. (ie converting
 // USDT to USD)
 type BotMapping struct {
-	ID          string       `json:"id"`
-	Source      BotConfig    `json:"source"`
-	Destination BotConfig    `json:"dest"`
-	Overrides   BotOverrides `json:"overrides"`
-	Pairs		PairsConfiguration  `json:"pairs"`
+	ID          string             `json:"id"`
+	Source      BotConfig          `json:"source"`
+	Destination BotConfig          `json:"dest"`
+	Overrides   BotOverrides       `json:"overrides"`
+	Pairs       PairsConfiguration `json:"pairs"`
 }
 
 // BotConfig contains configuration elements for the 3commas bots.
@@ -76,11 +77,14 @@ type BotOverrides struct {
 	PanicSellUnavailableDeals bool   `json:"panicSellUnavailableDeals"`
 }
 
+// PairsConfiguration contains how a bot mapping should or should not update its pairs.  if manual, it will be left alone
 type PairsConfiguration struct {
-	Mode string `json:"mode"`
-	Config LunarConfiguration`json:"config"`
+	Mode   string             `json:"mode"`
+	Config LunarConfiguration `json:"config"`
 }
 
+// LunarConfiguration contains LunarCrush configurations such as currencies, refresh time, sort category, and max pairs
+// to return
 type LunarConfiguration struct {
 	QuoteCurrency struct {
 		Source string `json:"source"`
@@ -88,7 +92,7 @@ type LunarConfiguration struct {
 	} `json:"quote_currency"`
 	Refresh  string `json:"refresh"`
 	Category string `json:"category"`
-	MaxPairs      int    `json:"max"`
+	MaxPairs int    `json:"max"`
 }
 
 // Validate the configuration
@@ -201,7 +205,7 @@ func (c LunarCrushAPI) validate() []string {
 	return checkErrors
 }
 
-func (c LunarCache) validate() [] string {
+func (c LunarCache) validate() []string {
 	// Fast checks. Perform these first for a more responsive CLI.
 	checks := []struct {
 		bad    bool
@@ -221,7 +225,7 @@ func (c LunarCache) validate() [] string {
 	//validate duration
 	if c.Every != "" {
 		d, err := time.ParseDuration(c.Every)
-		if err != nil{
+		if err != nil {
 			checkErrors = append(checkErrors, fmt.Sprintf("invalid duriation for cache refresh: %v", err))
 		} else if d < 0 {
 			checkErrors = append(checkErrors, fmt.Sprintf("cache refresh time cannot be less than 0: %s", c.Every))
@@ -271,7 +275,7 @@ func (m BotConfig) validate() []string {
 	return checkErrors
 }
 
-func (p PairsConfiguration) validate() [] string {
+func (p PairsConfiguration) validate() []string {
 	var checkErrors []string
 
 	checks := []struct {
@@ -304,7 +308,7 @@ func (p PairsConfiguration) validate() [] string {
 		}
 		//validate duration
 		d, err := time.ParseDuration(c.Refresh)
-		if err != nil{
+		if err != nil {
 			checkErrors = append(checkErrors, fmt.Sprintf("invalid duriation for pair refresh: %v", err))
 		} else if d <= 0 {
 			checkErrors = append(checkErrors, fmt.Sprintf("pair refresh time cannot be less than 0: %s", c.Refresh))

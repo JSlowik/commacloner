@@ -12,19 +12,19 @@ import (
 )
 
 const (
-	pairParameter = "pair"
-	pairsParameter = "pairs"
-	takeProfitParameter = "take_profit"
-	nameParameter = "name"
-	baseOrderVolumeParameter = "base_order_volume"
-	safetyOrderVolumeParameter = "safety_order_volume"
-	martingaleVolumeParameter = "martingale_volume_coefficient"
-	martingaleStepParameter = "martingale_step_coefficient"
-	maxSafetyOrderParameter = "max_safety_orders"
+	pairParameter                   = "pair"
+	pairsParameter                  = "pairs"
+	takeProfitParameter             = "take_profit"
+	nameParameter                   = "name"
+	baseOrderVolumeParameter        = "base_order_volume"
+	safetyOrderVolumeParameter      = "safety_order_volume"
+	martingaleVolumeParameter       = "martingale_volume_coefficient"
+	martingaleStepParameter         = "martingale_step_coefficient"
+	maxSafetyOrderParameter         = "max_safety_orders"
 	activeSafetyOrderCountParameter = "active_safety_orders_count"
-	safetyOrderStepParameter = "safety_order_step_percentage"
-	takeProfitTypeParameter = "take_profit_type"
-	strategyListParameter = "strategy_list"
+	safetyOrderStepParameter        = "safety_order_step_percentage"
+	takeProfitTypeParameter         = "take_profit_type"
+	strategyListParameter           = "strategy_list"
 )
 
 const (
@@ -32,10 +32,11 @@ const (
 	StartNewBotDeal  = "/ver1/bots/%d/start_new_deal"
 	CancelBotDeal    = "/ver1/deals/%d/cancel"
 	PanicSellBotDeal = "/ver1/deals/%d/panic_sell"
-	UpdateBotPairs = "/ver1/bots/%d/update"
+	UpdateBotPairs   = "/ver1/bots/%d/update"
 )
 
-func GetBot(apiConfig config.API, id int) (dobjs.Bot,error) {
+//GetBot returns the JSON description of a bot based on its bot id.
+func GetBot(apiConfig config.API, id int) (dobjs.Bot, error) {
 	logger := log.NewLogger("bots")
 	route := fmt.Sprintf(ShowBot, id)
 	path := apiConfig.RestURL + route
@@ -43,7 +44,7 @@ func GetBot(apiConfig config.API, id int) (dobjs.Bot,error) {
 	query := generateQuery(path, nil)
 
 	logger.Infof("getting bot info: %s", query.String())
-	info, err := makeRequest("GET", query, apiConfig,nil, nil)
+	info, err := makeRequest("GET", query, apiConfig, nil, nil)
 	if err != nil {
 		return dobjs.Bot{}, err
 	}
@@ -74,7 +75,7 @@ func StartNewDeal(apiConfig config.API, bot config.BotMapping, pair string) erro
 	query := generateQuery(path, params)
 
 	logger.Infof("generating new deal: %s", query.String())
-	_, err := makeRequest("POST", query, apiConfig,nil, nil)
+	_, err := makeRequest("POST", query, apiConfig, nil, nil)
 
 	return err
 }
@@ -93,18 +94,18 @@ func CancelDeal(apiConfig config.API, dealID int, panicSell bool) error {
 	query := generateQuery(path, nil)
 
 	logger.Infof("cancelling deal: %s", query.String())
-	_, err := makeRequest("POST", query, apiConfig,nil, nil)
+	_, err := makeRequest("POST", query, apiConfig, nil, nil)
 
 	return err
 }
 
-func UpdatePairs(apiConfig config.API,bot dobjs.Bot, quoteCurrency string, pairs [] string ) error{
+func UpdatePairs(apiConfig config.API, bot dobjs.Bot, quoteCurrency string, pairs []string) error {
 	logger := log.NewLogger("UpdatePairs")
 	route := fmt.Sprintf(UpdateBotPairs, bot.ID)
 
-	newPairs := make([]string,0)
+	newPairs := make([]string, 0)
 	for _, pair := range pairs {
-		newPairs = append(newPairs,fmt.Sprintf("%s_%s",quoteCurrency,pair))
+		newPairs = append(newPairs, fmt.Sprintf("%s_%s", quoteCurrency, pair))
 	}
 
 	params := make(map[string]string)
@@ -114,22 +115,18 @@ func UpdatePairs(apiConfig config.API,bot dobjs.Bot, quoteCurrency string, pairs
 		return err
 	}
 
-	//params := make(map[string]string)
-	//params[nameParameter] = bot.Name
-	//params[pairsParameter] = string(pString)
-
 	data := url.Values{}
-	data.Set(nameParameter,bot.Name)
+	data.Set(nameParameter, bot.Name)
 	data.Set(pairsParameter, string(pString))
-	data.Set(baseOrderVolumeParameter,bot.BaseOrderVolume)
-	data.Set(takeProfitParameter,bot.TakeProfit)
-	data.Set(safetyOrderVolumeParameter,bot.SafetyOrderVolume)
-	data.Set(martingaleVolumeParameter,bot.MartingaleVolumeCoefficient)
-	data.Set(martingaleStepParameter,bot.MartingaleStepCoefficient)
+	data.Set(baseOrderVolumeParameter, bot.BaseOrderVolume)
+	data.Set(takeProfitParameter, bot.TakeProfit)
+	data.Set(safetyOrderVolumeParameter, bot.SafetyOrderVolume)
+	data.Set(martingaleVolumeParameter, bot.MartingaleVolumeCoefficient)
+	data.Set(martingaleStepParameter, bot.MartingaleStepCoefficient)
 	data.Set(maxSafetyOrderParameter, strconv.Itoa(bot.MaxSafetyOrders))
-	data.Set(activeSafetyOrderCountParameter,strconv.Itoa(bot.ActiveSafetyOrdersCount))
-	data.Set(safetyOrderStepParameter,bot.SafetyOrderStepPercentage)
-	data.Set(takeProfitTypeParameter,bot.TakeProfitType)
+	data.Set(activeSafetyOrderCountParameter, strconv.Itoa(bot.ActiveSafetyOrdersCount))
+	data.Set(safetyOrderStepParameter, bot.SafetyOrderStepPercentage)
+	data.Set(takeProfitTypeParameter, bot.TakeProfitType)
 	strategy, _ := json.Marshal(bot.StrategyList)
 	data.Set(strategyListParameter, string(strategy))
 
