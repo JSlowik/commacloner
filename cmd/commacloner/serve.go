@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jslowik/commacloner/api/lunarcrush"
+	tcApi "github.com/jslowik/commacloner/api/threecommas/rest"
 	"github.com/jslowik/commacloner/api/threecommas/websockets"
 	wsapi "github.com/jslowik/commacloner/api/threecommas/websockets/dobjs"
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -18,6 +21,8 @@ import (
 	"github.com/jslowik/commacloner/config"
 	"github.com/jslowik/commacloner/log"
 	"github.com/spf13/cobra"
+
+	"github.com/go-co-op/gocron"
 )
 
 func commandServe() *cobra.Command {
@@ -61,7 +66,6 @@ func serve(args []string) error {
 	}
 
 	//init logging
-	//l, err := log.InitWithConfiguration(c.Logging.Level, c.Logging.Format)
 	err = log.InitWithConfiguration(c.Logging)
 	if err != nil {
 		return fmt.Errorf("invalid config: %v", err)
@@ -69,12 +73,44 @@ func serve(args []string) error {
 	logger := log.NewLogger("serve")
 	logger.Info("logging configured")
 
+	//Init LunarCrush if configured
+	blacklist := make(map[string] bool)
+	for _ ,v := range c.LunarcrushAPI.Blacklist {
+		blacklist[v] = true
+	}
+
+	lunarCache := &lunarcrush.LunarCache{
+		Logger: log.NewLogger("lunarCache"),
+		Config: c.LunarcrushAPI,
+		Blacklist: blacklist,
+	}
+
+	scheduler := gocron.NewScheduler(time.UTC)
+	if c.LunarcrushAPI.Cache.Enabled {
+		//Block for first cache load
+		logger.Infof("initializing LunarCrush cache")
+		lunarCache.UpdateCache()
+		logger.Infof("LunarCrush cache initialized")
+
+		//Schedule for Cache updates
+		_, _ = scheduler.Every(c.LunarcrushAPI.Cache.Every).WaitForSchedule().Do(lunarCache.UpdateCache)
+	}
+
+
 	//log mappings
 	logger.Info("loading bot mappings")
 	botMap := make(map[int][]config.BotMapping)
 	for _, mapping := range c.Bots {
 		botMap[mapping.Source.ID] = append(botMap[mapping.Source.ID], mapping)
+		if mapping.Pairs.Mode == "lunarcrush" {
+			//Schedule an Updater for the bot
+			_, _ = scheduler.Every(mapping.Pairs.Config.Refresh).Tag(fmt.Sprintf("updatePairs_%s", mapping.ID)).Do(UpdateMapping,c.API,mapping,lunarCache)
+		}
 	}
+
+	//Start Scheduler
+	scheduler.StartAsync()
+
 
 	//Make the subscription message
 	stream := websockets.DealsStream{
@@ -97,7 +133,7 @@ func serve(args []string) error {
 		return err
 	}
 
-	//When the program closes close the connection
+	//When the program closes, close the connection
 	defer conn.Close()
 	done := make(chan struct{})
 	go func() {
@@ -195,4 +231,72 @@ func generateConnection(existingConnection *websocket.Conn, url string, logger *
 		logger.Fatalf("dial: %v ", err)
 	}
 	return conn, err
+}
+
+func UpdateMapping(apiConfig config.API,mapping config.BotMapping, cache *lunarcrush.LunarCache) error{
+	logger := log.NewLogger(fmt.Sprintf("updatePairs_%s",mapping.ID))
+
+	exchangeMap, err := tcApi.GetExchangeAccounts(apiConfig)
+	if err != nil {
+		logger.Errorf("cannot get exchange accounts: %v",  err)
+	}
+
+	//Get the Destination Bot
+	destBot, err := tcApi.GetBot(apiConfig, mapping.Destination.ID)
+	if err != nil {
+		logger.Errorf("cannot get info for bot %d: %v", mapping.Destination, err)
+	}
+
+	//Get the Source Bot
+	sourceBot, err := tcApi.GetBot(apiConfig, mapping.Source.ID)
+	if err != nil {
+		logger.Errorf("cannot get info for bot %d: %v", mapping.Destination, err)
+	}
+
+	//Get the pairs of the destination exchange
+	marketCode := exchangeMap[destBot.AccountID].MarketCode
+	destPairs, err := tcApi.GetExchangePairs(apiConfig,marketCode)
+	if err != nil {
+		return fmt.Errorf("could not get exchange pairs: %v", err)
+	}
+
+	pMap := make(map[string][]string)
+	for _,p := range destPairs {
+		pairSplit := strings.Split(p, "_")
+		if pMap[pairSplit[1]] == nil {
+			pMap[pairSplit[1]] = make([]string,0)
+		}
+		pMap[pairSplit[1]] = append(pMap[pairSplit[1]] , pairSplit[0])
+	}
+	cat := mapping.Pairs.Config.Category
+
+	var validPairs []string
+	switch cat {
+	case "galaxyscore":
+		logger.Infof("update %s by galaxy score", mapping.ID)
+		validPairs = cache.GetByGalaxyScore(pMap,mapping.Pairs.Config.MaxPairs)
+		logger.Infof("pairs by galaxy score: %v", validPairs)
+	case "altrank":
+		logger.Infof("update %s by altrank", mapping.ID)
+		validPairs = cache.GetByAltRank(pMap,mapping.Pairs.Config.MaxPairs)
+		logger.Infof("pairs by altrank: %v", validPairs)
+	default:
+		logger.Errorf("invalid update pairs criteria: %s", cat)
+	}
+
+	if len(validPairs) > 0 {
+		//Update Source bot
+		err := tcApi.UpdatePairs(apiConfig,sourceBot, mapping.Pairs.Config.QuoteCurrency.Source,validPairs)
+		if err != nil {
+			logger.Errorf("could not update source bot %d: %v", mapping.Source.ID, err)
+		}
+
+		//Update Destination Bot
+		err = tcApi.UpdatePairs(apiConfig,destBot, mapping.Pairs.Config.QuoteCurrency.Dest,validPairs)
+		if err != nil {
+			logger.Errorf("could not update source bot %d: %v", mapping.Source.ID, err)
+		}
+	}
+
+	return nil
 }

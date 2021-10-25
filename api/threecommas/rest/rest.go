@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/jslowik/commacloner/api/threecommas"
 	"github.com/jslowik/commacloner/config"
@@ -23,17 +24,33 @@ func generateQuery(path string, queryParameters map[string]string) *url.URL {
 }
 
 //makeRequest makes and signs an http request, and returns the response
-func makeRequest(method string, query *url.URL, apiConfig config.API) ([]byte, error) {
-	// Generate Signature
-	sig := threecommas.ComputeSignature(fmt.Sprintf("%s?%s", query.Path, query.RawQuery), apiConfig.Secret)
+func makeRequest(method string, query *url.URL, apiConfig config.API, data url.Values, additionalHeaders map[string]string) ([]byte, error) {
 
-	req, err := http.NewRequest(method, query.String(), nil)
+	valString := data.Encode()
+
+	q := query.RawQuery
+
+	if q == "" {
+		q = valString
+	} else if valString != "" {
+			q = q + "&" + valString
+	}
+
+	// Generate Signature
+	sig := threecommas.ComputeSignature(fmt.Sprintf("%s?%s", query.Path, q), apiConfig.Secret)
+
+
+	req, err := http.NewRequest(method, query.String(), bytes.NewBufferString(valString))
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Set("APIKEY", apiConfig.Key)
 	req.Header.Set("Signature", sig)
+
+	for key,value := range additionalHeaders {
+		req.Header.Set(key,value)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
